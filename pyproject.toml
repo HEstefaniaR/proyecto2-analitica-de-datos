@@ -1,0 +1,26 @@
+[project]
+name = "proyecto-2"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Estefanía Hernández", email = "estefanna.hernnndez@uao.edu.co" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.3.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.2",
+    "pandas>=3.0.6",
+    "plotly>=7.1.0",
+    "scikit-image>=0.26.0",
+    "scipy>=1.18.1",
+    "simpleitk>=2.5.6",
+    "streamlit>=1.64.0",
+    "torch>=2.14.0",
+    "torchvision>=0.29.0",
+    "tqdm>=4.70.1",
+]
+
+[tool.uv.workspace]
+members = []
