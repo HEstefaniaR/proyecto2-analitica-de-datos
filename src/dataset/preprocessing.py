@@ -81,12 +81,25 @@ def to_cube(img: sitk.Image, geom: dict, is_mask: bool = False) -> sitk.Image:
         interp, fill = sitk.sitkNearestNeighbor, 0
     else:
         img = sitk.Cast(img, sitk.sitkFloat32)
-        sigma = [max(0.0, (config.VOXEL_MM - s) / 2) for s in img.GetSpacing()]
+        sigma = [max(0.0, (g - s) / 2) for g, s in zip(geom["spacing"], img.GetSpacing())]
         if any(s > 0 for s in sigma):
             img = sitk.DiscreteGaussian(img, variance=[s * s for s in sigma], useImageSpacing=True)
         interp, fill = sitk.sitkLinear, float(config.PAD_HU)
     return sitk.Resample(img, list(geom["size"]), sitk.Transform(), interp, geom["origin"], geom["spacing"],
                          geom["direction"], fill, img.GetPixelID())
+
+
+def hires_geometry(geom: dict, factor: int = 2) -> dict:
+    """Rejilla del cubo con `factor` veces más resolución en el plano axial (x, y) y los mismos cortes en z:
+    el píxel (i, j) del cubo cubre los píxeles [factor·i, factor·i + factor) de esta rejilla. Para la cabeza de
+    máscara (D-82), que recorta el CT a 0,78 mm por píxel."""
+    direction = np.array(geom["direction"]).reshape(3, 3)
+    sp = np.array(geom["spacing"], float)
+    shift = np.array([(sp[0] - sp[0] / factor) / 2, (sp[1] - sp[1] / factor) / 2, 0.0])
+    origin = np.array(geom["origin"]) - direction @ shift
+    size = geom["size"]
+    return {"origin": tuple(float(v) for v in origin), "spacing": (sp[0] / factor, sp[1] / factor, sp[2]),
+            "direction": geom["direction"], "size": (size[0] * factor, size[1] * factor, size[2])}
 
 
 def window_hu(hu: np.ndarray, window=config.HU_WINDOW) -> np.ndarray:
