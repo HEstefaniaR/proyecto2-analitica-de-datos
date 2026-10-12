@@ -1,0 +1,2 @@
+[server]
+maxUploadSize = 1024   # MB: los .mha del dataset pesan hasta ~420 MB (el límite por defecto es 200)
