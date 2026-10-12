@@ -248,3 +248,13 @@ venv/
 *.mha
 *.mhd
 *.raw
+
+# Pesos de SAM (375 MB, se descargan aparte)
+models/sam/
+
+# Predicciones guardadas por el dashboard (se regeneran solas)
+results/dashboard_cache/
+
+# Modelos anteriores: solo métricas e historiales (sin pesos ni paquetes)
+results/detection/_archivo/**/*.pth
+results/detection/_archivo/**/*.zip

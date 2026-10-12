@@ -15,6 +15,7 @@ dependencies = [
     "plotly>=7.1.0",
     "scikit-image>=0.26.0",
     "scipy>=1.18.1",
+    "segment-anything>=1.0",
     "simpleitk>=2.5.6",
     "streamlit>=1.64.0",
     "torch>=2.14.0",
