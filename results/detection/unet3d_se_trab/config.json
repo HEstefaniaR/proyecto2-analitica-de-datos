@@ -1,0 +1,214 @@
+{
+  "arch": "fundidora3d_det2d",
+  "attention": "se",
+  "cbam": false,
+  "head_attention": true,
+  "m3d_attention": "cbam",
+  "m3d_aug_rotation_deg": 10,
+  "m3d_box_weight": 7.429184549356223,
+  "m3d_calibration_cases": 10,
+  "m3d_cbam_blocks": [
+    4
+  ],
+  "m3d_checkpoint": true,
+  "m3d_cls_classes": 3,
+  "m3d_cls_hidden": 64,
+  "m3d_connectivity": 6,
+  "m3d_decoder": [
+    64,
+    32,
+    16,
+    8
+  ],
+  "m3d_decoder_act": "leaky",
+  "m3d_decoder_attention": [
+    "p3"
+  ],
+  "m3d_det_classes": 1,
+  "m3d_det_init": {
+    "obj": 0.6924,
+    "box": 0.0932
+  },
+  "m3d_det_slices": 32,
+  "m3d_det_views": [
+    "axial"
+  ],
+  "m3d_epochs": 140,
+  "m3d_eval_examples": 3,
+  "m3d_eval_splits": [
+    "val",
+    "test"
+  ],
+  "m3d_eval_stride": 1,
+  "m3d_hires_dir": "C:\\Users\\estef\\Documents\\GitHub\\proyecto2-analitica-de-datos\\data\\cache_cubo_400mm_256_axial512",
+  "m3d_hires_factor": 2,
+  "m3d_input": 256,
+  "m3d_latency_runs_cpu": 2,
+  "m3d_latency_runs_gpu": 5,
+  "m3d_leaky_slope": 0.01,
+  "m3d_loss_init": {
+    "det": 1.3847,
+    "anat": 1.1029,
+    "seg": 1.6201,
+    "mask": 1.3477
+  },
+  "m3d_loss_priority": {
+    "det": 1.5,
+    "anat": 1.5,
+    "seg": 2.0,
+    "mask": 2.0
+  },
+  "m3d_loss_weights": {
+    "det": 1.0832671336751643,
+    "anat": 1.360050775228942,
+    "seg": 1.2344916980433305,
+    "mask": 1.4840097944646435
+  },
+  "m3d_lr": 0.001,
+  "m3d_mask_channels": 64,
+  "m3d_mask_chunk": 32,
+  "m3d_mask_detach": true,
+  "m3d_mask_head": true,
+  "m3d_mask_jitter": 0.1,
+  "m3d_mask_score_thr": 0.5,
+  "m3d_mask_size": 96,
+  "m3d_mask_thr": 0.5,
+  "m3d_max_det": 3,
+  "m3d_min_bone_dice": 0.5,
+  "m3d_min_fragment_mm3": 190.73486328125,
+  "m3d_min_instance_voxels": 50,
+  "m3d_neck": 128,
+  "m3d_overfit_cases": 2,
+  "m3d_overfit_iters": 300,
+  "m3d_refine_margins": [
+    0,
+    2,
+    4,
+    6,
+    8
+  ],
+  "m3d_restrict_to_detection": true,
+  "m3d_roi_feat": 48,
+  "m3d_run_cbam": "unet3d_cbam_trab",
+  "m3d_run_no_cbam": "unet3d_sin_atencion",
+  "m3d_run_prev": "unet3d_cbam",
+  "m3d_run_se": "unet3d_se_trab",
+  "m3d_sam_score_thr": 0.5,
+  "m3d_seg_aux": true,
+  "m3d_seg_aux_weight": 0.5,
+  "m3d_seg_ce_weight": 0.5,
+  "m3d_seg_dice_weight": 0.5,
+  "m3d_select_metrics": [
+    "val_mAP50_95",
+    "val_dice_sem",
+    "val_dice_mask",
+    "val_macro_f1"
+  ],
+  "m3d_sem_classes": 4,
+  "m3d_trab_window": [
+    100.0,
+    700.0
+  ],
+  "m3d_track_iou": 0.3,
+  "m3d_train_eval_cases": 15,
+  "m3d_val_every": 5,
+  "m3d_val_stride": 3,
+  "m3d_weight_decay": 0.01,
+  "m3d_widths": [
+    16,
+    32,
+    64,
+    128
+  ],
+  "m3d_workers": 2,
+  "epochs": 140,
+  "input_cube": 256,
+  "cube_mm": 400.0,
+  "hu_window": [
+    50,
+    1300.0
+  ],
+  "anchors": {
+    "axial": {
+      "scales": [
+        34,
+        46,
+        58
+      ],
+      "ratios": [
+        0.63,
+        0.86,
+        1.58
+      ]
+    },
+    "coronal": {
+      "scales": [
+        39,
+        60,
+        85
+      ],
+      "ratios": [
+        0.36,
+        0.68,
+        1.3
+      ]
+    },
+    "sagittal": {
+      "scales": [
+        35,
+        52,
+        71
+      ],
+      "ratios": [
+        0.52,
+        0.74,
+        1.03
+      ]
+    }
+  },
+  "stride": 8,
+  "view_classes": {
+    "axial": [
+      "sacrum",
+      "left_hipbone",
+      "right_hipbone"
+    ],
+    "coronal": [
+      "sacrum",
+      "left_hipbone",
+      "right_hipbone"
+    ],
+    "sagittal": [
+      "sacrum",
+      "hipbone"
+    ]
+  },
+  "pos_iou": 0.5,
+  "neg_iou": 0.4,
+  "lambdas": {
+    "cls": 1.0,
+    "box": 1.0
+  },
+  "neg_frac": 0.15,
+  "grad_clip": 10.0,
+  "amp": true,
+  "seed": 99,
+  "augment": {
+    "blur_sigma": [
+      0.5,
+      1.5
+    ],
+    "brightness": 0.05,
+    "contrast": 0.2,
+    "degrade_prob": 0.3,
+    "gamma": 1.4,
+    "lowres_factor": [
+      1.5,
+      3.0
+    ],
+    "noise_std": 0.03,
+    "rotation_deg": 15,
+    "scale": 0.15,
+    "shift": 0.08
+  }
+}
