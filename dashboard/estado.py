@@ -53,6 +53,40 @@ def ruta_upload(archivo) -> str | None:
     return ruta
 
 
+_SUBIDA_DIR = Path(__file__).resolve().parent / "subida_partes"
+_CABECERA = 256                                                # bytes de la cabecera JSON de cada parte
+
+
+def subida_por_partes(trozo_mb: float = 4.0) -> tuple[str, str] | None:
+    """Subida de un CT en partes pequeñas por el websocket de Streamlit (`dashboard/subida_partes/index.html`).
+
+    El cargador normal manda el archivo en una sola petición; detrás del túnel de Cloudflare esa petición se corta
+    por tiempo con archivos grandes o redes lentas. Aquí el navegador manda una parte, Python la agrega a un temporal
+    y la confirma (`ack`), y solo entonces llega la siguiente. Devuelve (ruta, nombre) cuando el archivo está completo.
+    """
+    import streamlit.components.v1 as components
+
+    comp = components.declare_component("subida_por_partes", path=str(_SUBIDA_DIR))
+    s = st.session_state.setdefault("_subida", {"id": None, "ruta": None, "recibidas": -1, "ack": None,
+                                                "nombre": None, "lista": False})
+    valor = comp(ack=s["ack"], trozo_mb=trozo_mb, key="subida_por_partes", default=None)
+    if isinstance(valor, (bytes, bytearray)) and len(valor) >= _CABECERA:
+        cab = json.loads(bytes(valor[:_CABECERA]).decode("utf-8").strip())
+        if cab["id"] != s["id"] and cab["i"] == 0:             # archivo nuevo: temporal nuevo
+            sufijo = "".join(Path(cab["nombre"]).suffixes[-2:]) or ".mha"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=sufijo) as tmp:
+                ruta = tmp.name
+            s.update(id=cab["id"], ruta=ruta, recibidas=-1, nombre=cab["nombre"], lista=False)
+        if cab["id"] == s["id"] and cab["i"] == s["recibidas"] + 1:
+            with open(s["ruta"], "ab") as f:
+                f.write(valor[_CABECERA:])
+            s["recibidas"] = cab["i"]
+            s["lista"] = cab["i"] == cab["n"] - 1 and Path(s["ruta"]).stat().st_size == cab["tam"]
+            s["ack"] = f"{cab['id']}:{cab['i']}"
+            st.rerun()                                         # el componente recibe el `ack` y manda la parte siguiente
+    return (s["ruta"], s["nombre"]) if s["lista"] and Path(s["ruta"]).exists() else None
+
+
 @st.cache_data(show_spinner="Cargando volumen…", max_entries=3)
 def cargar_volumen(ruta: str) -> tuple[np.ndarray, tuple[float, float, float]]:
     """Carga y reorienta el volumen (mismo paso de orientación del pipeline). Sin crop ni

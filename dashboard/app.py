@@ -47,8 +47,12 @@ with st.sidebar:
     else:
         archivo = st.file_uploader("Volumen CT (.mha, .nii, .nii.gz)", type=["mha", "nii", "gz"])
         ruta_archivo = estado.ruta_upload(archivo)
+        st.caption("Archivo pesado o red lenta (más de ~150 MB por el túnel): súbelo por partes.")
+        por_partes = estado.subida_por_partes()
         if ruta_archivo:
             ruta, etiqueta = ruta_archivo, archivo.name
+        elif por_partes:
+            ruta, etiqueta = por_partes
 
     vista = st.radio("Visualizador", list(VISTAS))
 

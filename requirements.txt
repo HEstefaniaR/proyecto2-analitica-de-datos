@@ -92,7 +92,9 @@ lazy-loader==0.6
 markupsafe==3.0.3
     # via jinja2
 matplotlib==3.11.2
-    # via proyecto-2
+    # via
+    #   proyecto-2
+    #   seaborn
 matplotlib-inline==0.2.2
     # via
     #   ipykernel
@@ -119,6 +121,7 @@ numpy==2.5.3
     #   pydeck
     #   scikit-image
     #   scipy
+    #   seaborn
     #   streamlit
     #   tifffile
     #   torchvision
@@ -173,6 +176,7 @@ packaging==26.3
 pandas==3.0.6
     # via
     #   proyecto-2
+    #   seaborn
     #   streamlit
 parso==0.8.7
     # via jedi
@@ -240,6 +244,8 @@ scipy==1.18.1
     # via
     #   proyecto-2
     #   scikit-image
+seaborn==0.13.2
+    # via proyecto-2
 segment-anything==1.0
     # via proyecto-2
 setuptools==84.0.0
