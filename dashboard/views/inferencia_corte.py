@@ -118,6 +118,9 @@ def render(volumen: np.ndarray, spacing_xyz, ruta: str, etiqueta: str = "") -> N
     c1.metric("Pipeline", f"{t['pipeline']:.0f} s", origen)
     c2.metric("Preproceso", f"{t['preproceso']:.1f} s", f"distancias: {t['distancias']:.1f} s")
     c3.metric("Fragmentos", str(len(res["fragmentos"])))
+    n_cortes = volumen.shape[0]
+    st.caption(f"Latencia de la red: {1000 * t['pipeline'] / n_cortes:.0f} ms por corte "
+               f"({t['pipeline']:.1f} s en {n_cortes} cortes, {res['device']}). No incluye el preproceso ni las distancias.")
 
     st.markdown("🟥 Sacro 🟦 Coxal izq. 🟩 Coxal der. 🟨 Región detectada (línea discontinua) y distancia de "
                 "separación de los fragmentos conminutos (C1, C2…)")

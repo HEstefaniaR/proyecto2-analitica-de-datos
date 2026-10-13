@@ -258,3 +258,7 @@ results/dashboard_cache/
 # Modelos anteriores: solo métricas e historiales (sin pesos ni paquetes)
 results/detection/_archivo/**/*.pth
 results/detection/_archivo/**/*.zip
+
+# Salidas de `model3d infer` (se regeneran; las máscaras .nii.gz ya están ignoradas)
+results/inferencia/
+results/inferencia_informe/
