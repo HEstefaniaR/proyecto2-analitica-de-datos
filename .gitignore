@@ -262,3 +262,10 @@ results/detection/_archivo/**/*.zip
 # Salidas de `model3d infer` (se regeneran; las máscaras .nii.gz ya están ignoradas)
 results/inferencia/
 results/inferencia_informe/
+
+# Estado para reanudar el entrenamiento (pesa más que best.pth; solo se sube best.pth)
+results/detection/**/last.pth
+
+# Archivos de prueba del dashboard e infer (CT 039 de test): un volumen y una serie de cortes
+!ejemplos/*.mha
+!ejemplos/**/*.mha

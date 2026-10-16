@@ -34,7 +34,7 @@ st.markdown(
 
 with st.sidebar:
     st.header("Caso")
-    fuente = st.radio("Fuente", ["Caso del dataset", "Subir archivo"])
+    fuente = st.radio("Fuente", ["Caso del dataset", "Subir CT"])
     ruta, etiqueta = None, None
     if fuente == "Caso del dataset":
         casos = estado.casos_dataset()
@@ -43,16 +43,27 @@ with st.sidebar:
         if eleccion != "—":
             caso = casos[opciones.index(eleccion) - 1]
             ruta, etiqueta = caso["ruta"], eleccion
-        st.caption("val/test: casos no usados en el entrenamiento")
+        st.caption("Casos de test: no se usaron para entrenar ni para elegir el modelo")
     else:
-        archivo = st.file_uploader("Volumen CT (.mha, .nii, .nii.gz)", type=["mha", "nii", "gz"])
-        ruta_archivo = estado.ruta_upload(archivo)
-        st.caption("Archivo pesado o red lenta (más de ~150 MB por el túnel): súbelo por partes.")
-        por_partes = estado.subida_por_partes()
-        if ruta_archivo:
-            ruta, etiqueta = ruta_archivo, archivo.name
-        elif por_partes:
-            ruta, etiqueta = por_partes
+        formato = st.radio("Formato", ["Volumen (un archivo)", "Serie de cortes (carpeta)"])
+        modo = "serie" if formato.startswith("Serie") else "volumen"
+        subida = estado.subida_por_partes(modo)
+        if subida and modo == "volumen":
+            ruta, etiqueta = subida["ruta"], subida["nombre"]
+        elif subida:
+            try:
+                info = estado.volumen_desde_cortes(subida["ruta"])
+                if info["dz_archivo"] is None:
+                    st.warning("Los cortes no traen la distancia entre ellos (eje z). Por defecto se usa 1,0 mm; "
+                               "cámbiala si la conoces.")
+                    dz = st.number_input("Distancia entre cortes (mm)", min_value=0.1, max_value=10.0,
+                                         value=1.0, step=0.1, format="%.2f")
+                    info = estado.volumen_desde_cortes(subida["ruta"], dz)
+                ruta = info["ruta"]
+                etiqueta = f"{subida['nombre']} ({info['cortes']} cortes, z = {info['dz']:.2f} mm)"
+                st.caption(f"{info['cortes']} cortes unidos en un volumen")
+            except ValueError as e:
+                st.error(str(e))
 
     vista = st.radio("Visualizador", list(VISTAS))
 

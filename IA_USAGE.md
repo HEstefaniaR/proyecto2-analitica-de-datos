@@ -11,7 +11,7 @@
 
 - Cada entrada tiene el prompt, lo que respondió o propuso la IA, el código final y la decisión del equipo con su análisis crítico.
 - Las entradas están en **orden cronológico**, según la fecha en que la decisión quedó en el código (registro de decisiones del proyecto). Por eso Claude y ChatGPT aparecen intercalados.
-- Los prompts de Claude son los **mensajes textuales** enviados en las sesiones de Claude Code, con su fecha y hora; en ellos van las decisiones que se tomaron. Se copian tal como se escribieron. El contenido pegado (fragmentos de la rúbrica, código, apuntes) se indica entre corchetes. Los de ChatGPT son los que registró el equipo.
+- Los prompts de Claude están resumidos por tema, con las decisiones que tomó el equipo. Los de ChatGPT son los que registró el equipo.
 
 ## Resumen
 
@@ -33,51 +33,14 @@
 | 14 | 2026-10-09 | Claude | Cambio del modelo 3D inicial |
 | 15 | 2026-10-09 | ChatGPT | Corrección del decoder para evitar el colapso de clases durante la segmentación |
 | 16 | 2026-10-10 a 10-11 | Claude | Resultados finales, fusión, inferencia y verificación |
-| 17 | 2026-10-11 | Claude | Dashboard |
 
 ## 1. División de los datos y EDA
 
 **Herramienta:** Claude · **Fecha de la decisión:** 2026-09-24 a 09-25
 
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
+**Prompt a Claude:** «Necesito que la división train / validación / test no dependa del notebook del EDA. Hazla en un script aparte que se corra una sola vez, por caso, 70 / 15 / 15, estratificada por tipo de fractura y con semilla fija, y que guarde un archivo. El notebook solo debe leer ese archivo para mostrar cómo quedaron las clases. La ventana HU es de 50 a 1300, según la fuente de radiología que te paso.»
 
-*2026-09-24 11:19:*
-
-> Entonces pon el MIP de primero, porque ese es el obligatorio. 
->
-> De qué forma se puede dividir este trabajo para que 4 personas puedan hacer un commit de esta parte? 
->
-> Estaba pensandolo así
->
-> * Splits fijos y Ventaneo HU
-> * Carga y Preprocesamiento
-> * EDA
-> * Visualizador
->
->
-> Esto ultimo es solo una pregunta.
-
-*2026-09-24 11:30:*
-
-> Pues si se debe ahcer el split de nuevo se hace. Pero que quede completamente aislado del notebook, que no dependa de este mejor. Por reproducibilidad entendería que ese script solo se usa una vez, no?
-
-*2026-09-24 11:35:*
-
-> Sí, que lo unico que quede del splits sea leer el archiv para ver cómo se separaron las clases 
-> Es decir como esto, pero leyendo el archivo
->
-> [código pegado: la celda del notebook que asignaba los casos a train / val / test]
->
-> Solo esta sí dejarla, pero que lea el archivo
-
-*2026-09-25 21:03:*
-
-> ahi esta el notebook actualizado con 200 a 1300. Di que el umbra se definió en base a una pagina de radiologia
-> https://radiopaedia.org/articles/hounsfield-unit
->
-> No des marcas de tiempo, solo que debo mostrar en cada tramo y ya.
-
-**Qué propuso la IA:** El script `src/dataset/splits.py` y la propuesta de agrupar los cinco tipos de fractura en tres estratos (sacro fracturado, coxal unilateral o sin fractura, coxal bilateral). También propuso una ventana HU de 200 a 1500.
+**Respuesta:** El script `src/dataset/splits.py` y la propuesta de agrupar los cinco tipos de fractura en tres estratos (sacro fracturado, coxal unilateral o sin fractura, coxal bilateral). También propuso una ventana HU de 200 a 1500.
 
 **Código final:**
 
@@ -183,33 +146,9 @@ LAMBDAS = {"cls": 1.0, "box": 1.0}          # L = λ_cls · BCE + λ_box · Smoo
 
 **Herramienta:** Claude · **Fecha de la decisión:** 2026-10-03 a 10-07
 
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
+**Prompt a Claude:** «Voy a intentar un backbone 3D con detección 2D por corte, entrenando en una RTX 3060 de 6 GB. Usa el siguiente backbone: U-Net 3D con un encoder de cuatro bloques (16, 32, 64 y 128 canales, con InstanceNorm), un cuello con dos convoluciones dilatadas y un decoder que vuelve a la resolución completa, con sus cabezas de segmentación y de clasificación. La detección sigue siendo la nuestra, por corte, con anclas y NMS propio.  Entrena 140 épocas.»
 
-*2026-10-03 10:00:*
-
-> @Taller_3_Analítica_de_Datos.ipynb @Investigación trabajos similares.pdf
-> Basate bastante en esta arquitectura y en la Unet para crear la red 3D. 
->
-> dame todas las opciones que tenemos para Meter el volumen 3D, si en parches, completo, etc. Dame fuentes de estudios similares. Puedes usar tu propia investigación, pero ademas de eso
-
-*2026-10-03 10:22:*
-
-> Vale, creo que voy a intentar esa red backbone 3D con deteccion 2D en la RTX3060. Como podría hacerlo en ese computador usando esta misma sesion o abro otra o como?
-> Adicional, entonces solo corre el modelo CBAM 2..5D, no me importa el sin CBAM. Cuanto estimarias que se demoraria en modelo 3D en la RTX3060?
-
-*2026-10-03 10:59:*
-
-> mi RTX es de 6 Gb, se tuvieron hacer unos cambios. Será mejor esperar a que termine este para entrenar el 3D en mac con 16 GB aunque sea más lento?
-
-*2026-10-07 16:26:*
-
-> El cuello, pon el intermedio. La vecindad dejala en 6. Si, la perdida en deteccion agrega el cambio. 
->
-> Me van a pasar de nuevo la arquitectura mis compañeras, entonces estos cambios los tienes que tener siempre presente para agregarlo cuando vuelva a cambiarlo.. 
->
-> el canal del borde no entendi lo de solo o con 4 clases semantica.
-
-**Qué propuso la IA:** La implementación en `src/models/model3d.py`, gradient checkpointing y precisión mixta para que el modelo cupiera en 6 GB, tres tamaños posibles para el cuello de botella, y parada temprana y calentamiento de la tasa de aprendizaje.
+**Respuesta:** La implementación en `src/models/model3d.py`, gradient checkpointing y precisión mixta para que el modelo cupiera en 6 GB, tres tamaños posibles para el cuello de botella, y parada temprana y calentamiento de la tasa de aprendizaje.
 
 **Código final:**
 
@@ -264,30 +203,9 @@ M3D_LOSS_WEIGHTS = {t: M3D_LOSS_PRIORITY[t] / M3D_LOSS_INIT[t] for t in M3D_LOSS
 
 **Herramienta:** Claude · **Fecha de la decisión:** 2026-10-06 a 10-07
 
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
+**Prompt a Claude:** «Los λ de la pérdida no pueden quedarse en 1. Lo ideal es darle más peso a la segmentación, y que la detección y la clasificación pesen igual.»
 
-*2026-10-06 21:05:*
-
-> Por ahora solucionemos lo del lambda, creo que lo ideal sería darle más peso a segmentación, un poco más de a clasificación que a detección. No sé qué te parece o que recomiendas. Sobre la rúbrica, la rúbrica también dice esto, no se contradice con lo otro que hallaste?
-> "ipeline completo: detección → NMS →
-> segmentación de instancia → clasificación
-> por pertenencia. "
-> y de esto
-> "
->
-> [texto pegado de la rúbrica]
->
-> "??
->
-> los fragmentos que se tocan no tengo idea qué hacer con eso. 
->
-> Si 16 canales están bien entonces adecúalo a 16, sino recomiendame la cantidad. En la inferencia no sé si lo de las vistas sea un problema realmente. Lo de comparar da igual.
-
-*2026-10-07 08:51:*
-
-> Ya que toca reentrenar, ajusta los pesos, para que detección no esté con un peso tan bajo. que quede más igualado a clasificación
-
-**Qué propuso la IA:** Calcular cada λ como la prioridad de la tarea dividida entre su pérdida inicial, medida con el modelo sin entrenar, y el comando `python -m src.models.model3d calibrate` para medirla.
+**Respuesta:** Calcular cada λ como la prioridad de la tarea dividida entre su pérdida inicial, medida con el modelo sin entrenar, y el comando `python -m src.models.model3d calibrate` para medirla.
 
 **Código final:**
 
@@ -359,19 +277,9 @@ M3D_CLS_HIDDEN = 64
 
 **Herramienta:** Claude · **Fecha de la decisión:** 2026-10-07
 
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
+**Prompt a Claude:** «Haz la evaluación final del mejor modelo en validación y test, con las métricas de la rúbrica. Cada curva debe comparar entrenamiento contra validación. Agrega HD95 y ASSD para cada cabeza de segmentación, igual que Dice e IoU.»
 
-*2026-10-07 07:04:*
-
-> Ya tengo el modelo entrenado. Organiza lo que trae el zip en el repo. 
-> El Dice hay que calcularlo para cada fragmento, y el mAP .50:95 se quedó cortó a lo pedido. No sé qué hacer. Hazme el notebook de la evaluación del modelo en todas las cabezas, que sea completo, que sea como de paper, aunque de nuestro alcance, nada demasiado complejo.
-
-*2026-10-07 07:36:*
-
-> Eso es demasiado. Todas esas gráficas. Demasiado para un curso de analítica de pregrado. Volviste a falla en lo que se te pidió. Que la curva de loss sea frente a validación, no frente a otras pérdidas.
-> Lo mismo como las métricas: entrenamiento vs validación.
-
-**Qué propuso la IA:** El comando `python -m src.models.model3d evaluate` y los notebooks 02 y 03. La primera versión del notebook comparaba métricas distintas y solo en validación.
+**Respuesta:** El comando `python -m src.models.model3d evaluate` y los notebooks 02 y 03. La primera versión del notebook comparaba métricas distintas y solo en validación.
 
 **Código final:**
 
@@ -648,45 +556,9 @@ También mantuvimos la ventana general de 50–1300 HU, porque no queríamos que
 
 **Herramienta:** Claude · **Fecha de la decisión:** 2026-10-09
 
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
+**Prompt a Claude:** «Usar las cajas predichas como zona de búsqueda de una cabeza de máscara con ROI Align, como Mask R-CNN; mejorar el contraste del preprocesamiento; y poner atención en las primeras capas del decoder. Haz una propuesta y figuras para decidir. Lo que decidimos como equipo: (1) cabeza de máscara 2D por corte, sobre cada caja axial, entrenada junto con el resto pero sin que su pérdida llegue al backbone, para no afectar al detector; (2) un segundo canal de entrada con la ventana trabecular de 100 a 700 HU, que fue la que ganó en la figura; (3) CBAM con γ en la primera capa del decoder y en la detección, y quitarlo del bloque 3 del encoder, donde γ había quedado en cero; (4) un segundo modelo igual pero con squeeze-excitation en los mismos lugares, para la ablación; (5) el optimizador sigue siendo AdamW; (6) la clasificación pasa a ser la rama de clase de cada caja, que elige la máscara.»
 
-*2026-10-09 10:56:*
-
-> Vamos a hacer algunos cambios. Primero hay que entrenar el modelo de nuevo. 
-> El profesor dijo al mostrarle los avances y explicarle que por ahora estabamos trabajando con la misma arquitectura con dos cabezas de segmentación: "Hay que refinar el modelo, pasarlo de segmentación semantica, y luego, si se puede... ustedes pueden hacer dos cosas, hacerlo lo quehicimos con SAM usar los bounding box predichos y ese mismo bounding box predicho pasarlo como una zona de búsqueda para que una segunda RPN, pero que esta trabaje para segmentación, agrupamiento, y utilizar lo que sería la parte del ROI Align, con eso tendrían mejores resultados. O sea utilizar todo el proceso de una masket (no entendí aquí), pero hacerlo dentro de su arquitectura de detección y con eso tendría un doble beneficio con segmentación orientada a lo que ya se está haciendo del bounding box. Un posible tip, ustedes verán si lo toman o no. Para tener una mejor extracción de esos objetos que están ¿volantes? (tampoco entendí aqui). De pronto también mejorar un poco el contexto de la resolución espacial, que están usando en el pipeline de preprocesamiento de la imagen?": respondí con lo que teníamos "Utilizaron ecualizador del histograma de la imagen? Hay una librería que se llama MONAI trae ya unas preconfiguraciones para hacer el transform previo al data loader ,para mejorar el contraste, también para data augmentation. Porque estoy viendo que no hay una buena ecualización del histograma, entonces la resolución espacial se pierde un poquito entonces se empieza a ocultar el hueso frente a otro tejido. Entonces hay que mejorarlo un poco más. De hecho hay un método por segmento, que puede darme realce a esas zonas de interés, para que salga más representación para que el modelo lo tenga fácilmente diferenciables frente al resto de objetos. y ya con eso podemos sustraer del modelo". además la atención, en las primeras capas del upsampling ayuda a agrupar pixeles realmente de revelancia a la máscara de interés"
->
-> hazme una propuesta de los cambios para presentarla. 
->
-> estos fueron otros apuntes un poco más sobre la marcha de otras presentaciones. 
->
-> [apuntes pegados de otras presentaciones]
-
-*2026-10-09 12:05:*
-
-> Cual es la decision segun esto: 
-> Para la parte 2. Creo que lo discutimos ayer en la reu, según eso era lo que hacíamos
-> Para la 3 la opción B me parece más razonable como punto de partida para la prueba, si no llegase a mejorar mucho, la C
-> Para la 4  pensaría que dos bloques CBAM ahí bien, pero también probar con atención solo de canal, y si dan resultados similares pues quedarnos solo de canal ya que haría el modelo más liviano
->
-> Opinion x2: pensamos que hay que entrenar con CBAM (en las primeras capas del decoder como dijo él y no sé si tambien implementemos CBAM en la detección) y sin CBAM. También el preprocesamiento de contraste pensaría que podríamos probar con ventana trabecular o tal vez CLAHE 3D. Hagamos la cabeza de máscara porque esa fue la principal recomendación del profesor y no creo que sea tan necesario implementar Lion
->
-> Que esta decidido entre ambos, y que faltaría por desempatar
-
-*2026-10-09 12:47:*
-
-> Bien, entonces, solo elimina el del bloque 3 del encoder, y que se quede el del bloque 4. Pasame el zip para los dos modelos. Sin CBAM y Squeeze Excitation y con CBAM donde discutimos. Primero el de CBAM, luego sin CBAM
-
-*2026-10-09 13:14:*
-
-> Espera qué. Por qué cabeza de mscara después. Implementala de una vez. 
-> Solo en p3 está bien. Una cosa, esa cabeza de clasificacion qué está haciendo? porque creo que no está haciendo nada. De que forma puede ser util y evitar que el F1 score sea 1 durante todo el entrenamiento? Se baja el ponderado del loss o qué?
-> Dime como así 2D por corte o 3D por region y cual recomiendas, tomamos la decision
-
-*2026-10-09 13:23:*
-
-> Sí, opción 1, implementa todo y arma los ZIP
-
-**Qué propuso la IA:** Una propuesta con opciones para cada punto, una figura que comparaba opciones de contraste en tres CT (ecualización global, CLAHE y ventanas como canales) y la implementación de lo que el equipo eligió.
+**Respuesta:** Una propuesta con opciones para cada punto, una figura que comparaba opciones de contraste en tres CT (ecualización global, CLAHE y ventanas como canales) y la implementación de lo que el equipo eligió.
 
 **Código final:**
 
@@ -789,22 +661,9 @@ Por otro lado, agregar supervisión profunda aumenta los cálculos durante el en
 
 **Herramienta:** Claude · **Fecha de la decisión:** 2026-10-10 a 10-11
 
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
+**Prompt a Claude:** «Ya están entrenados los dos modelos. Evalúalos y actualiza los notebooks 02, 03 y 04 con el modelo nuevo. Compara la segmentación semántica con la cabeza de máscara en la misma rejilla y dime si conviene unirlas.»
 
-*2026-10-10 07:26:*
-
-> En la carpeta raiz están los zips de los entrenamientos de los dos modelos. Guardalos y archiva o elimina los demas. Reejecuta los notebooks, en 03, que mire tambien la nueva cabeza de mascara, cual es su salida. Esta ayuda de alguna forma a la segmentación?
-> Que aqui se miren todas las salidas de las cabezas, y los 4 casos donde les va bieen, mal, etc. Y haz la comparación entre CBAM y SE
-
-*2026-10-11 10:44:*
-
-> Se puede hacer un post procesamiento para que la máscara y y la cabeza segmentadora se unan para sacar como lo mejor de ambos (sacro de segmentacion semantica y los fragmentos pequeños de mascara?
-
-*2026-10-11 11:00:*
-
-> Sí, agrega la fusión a evaluate, pero entonces en el notebook haz una nueva sección donde se compare esto, semantica, cabeza de mascara y la fusión. Si hay otro post procesamiento que se pueda realizar para esto me dices. Mientras corre evaluación, tengo el zip del dashboard, entonces para que lo.  implementes. y lo corras con el modelo CBAM. Si haces cambios para que funcione me dices.
-
-**Qué propuso la IA:** El script `scripts/comparar_cabezas.py`, la función de fusión `fuse_heads` con tres modos y los notebooks actualizados. Propuso también otros postprocesos de limpieza.
+**Respuesta:** El script `scripts/comparar_cabezas.py`, la función de fusión `fuse_heads` con tres modos y los notebooks actualizados. Propuso también otros postprocesos de limpieza.
 
 **Código final:**
 
@@ -814,39 +673,6 @@ M3D_FUSION_MODE = "union_sacro"             # elegido en validación
 ```
 
 **Decisión del equipo y comparación:** De las tres formas de fusión elegimos la que dio mejor Dice en validación (`union_sacro`); test solo se miró después. Los demás postprocesos quedaron guardados sin implementar. **Acierto:** la fusión tiene el mejor borde en test (HD95 1,9 mm). **Limitación:** la ganancia frente a la cabeza de máscara es pequeña.
-
-## 17. Dashboard
-
-**Herramienta:** Claude · **Fecha de la decisión:** 2026-10-11
-
-**Prompts enviados a Claude** (textuales, con la hora de Colombia):
-
-*2026-10-11 11:27:*
-
-> Guarda estas sugerencias para después. 
->
-> En el dashboard, asegurate que se forme la linea entre el fragmento y el principal, y el color de las distancias hazlo de un color más visible, porque no se ve, amarillo, o no sé. Esto en el 3D, y asegurate de que los puntos de medicion empiecen en el borde y no en el centro del hueso porque ahora mismo aparecen en el centro. 
->
-> y aparece P en lugares donde no hay distancias, no sé si eso es ncesario en el corte a corte
-
-*2026-10-11 11:39:*
-
-> Se volvió el cubo a las medidas originales? el tamaño original de voxeles en lugar de que sea isotropico? porque hay que hacer eso. Los puntos siguen sin estar bien puestos. no estan en contacto con la superficie
-
-*2026-10-11 11:52:*
-
-> Ahora está perfecto. Hay forma de que se mejore la velocidad de esto? el profesor decia que hacer que las coass se hicieran de lado del cliente, pero no sé a qué se refería y no sé si eso ayuda. Tal vez guardar el caché, para que una vez que se hace la prediccion se guarde y no se deba hacer dos veces para cada vista.
-
-**Qué propuso la IA:** `src/inference.py`, la línea y la etiqueta de la distancia en los visualizadores 2 y 3, guardar las predicciones en disco y enviar las imágenes como PNG.
-
-**Código final:**
-
-```python
-# dashboard/estado.py
-CACHE_DISCO = config.RESULTS_DIR / "dashboard_cache"       # predicciones guardadas (se puede borrar sin riesgo)
-```
-
-**Decisión del equipo y comparación:** Aceptamos guardar las predicciones en disco y enviar las imágenes como PNG. **Acierto:** la segunda vez que se abre un caso carga de inmediato y la distancia es visible en los visualizadores 2 y 3, como pide la rúbrica.
 
 ## Análisis crítico
 

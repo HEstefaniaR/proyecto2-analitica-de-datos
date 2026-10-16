@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -25,66 +27,140 @@ from src import config  # noqa: E402
 # --------------------------------------------------------------------------- casos y volumen
 @st.cache_data(show_spinner=False)
 def casos_dataset() -> list[dict]:
-    """Casos .mha del dataset con su split (splits.csv), ordenados por id."""
+    """Casos .mha del conjunto de test (splits.csv), ordenados por id: los únicos que el modelo no vio al entrenar
+    ni se usaron para elegirlo."""
     import pandas as pd
 
     rutas = {p.stem: p for d in config.IMAGE_DIRS for p in sorted(d.glob("*.mha"))}
     tabla = pd.read_csv(config.SPLITS_DIR / "splits.csv", dtype={"case_id": str})
     splits = dict(zip(tabla.case_id, tabla.split))
-    return [{"id": cid, "split": splits.get(cid, "?"), "ruta": str(ruta)} for cid, ruta in sorted(rutas.items())]
-
-
-def ruta_upload(archivo) -> str | None:
-    """Vuelta a disco del volumen subido, una sola vez por (nombre, tamaño).
-
-    Guardar la ruta en session_state evita reescribir el temporal (y recargar el volumen) en cada
-    interacción de Streamlit.
-    """
-    if archivo is None:
-        return None
-    clave = f"upload_{archivo.name}_{archivo.size}"
-    ruta = st.session_state.get(clave)
-    if ruta is None or not Path(ruta).exists():
-        sufijo = "".join(Path(archivo.name).suffixes) or ".mha"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=sufijo) as tmp:
-            tmp.write(archivo.getbuffer())
-        ruta = tmp.name
-        st.session_state[clave] = ruta
-    return ruta
+    return [{"id": cid, "split": splits[cid], "ruta": str(ruta)} for cid, ruta in sorted(rutas.items())
+            if splits.get(cid) == "test"]
 
 
 _SUBIDA_DIR = Path(__file__).resolve().parent / "subida_partes"
-_CABECERA = 256                                                # bytes de la cabecera JSON de cada parte
+_EXT_CORTE = (".mha", ".nii", ".nii.gz")
 
 
-def subida_por_partes(trozo_mb: float = 4.0) -> tuple[str, str] | None:
-    """Subida de un CT en partes pequeñas por el websocket de Streamlit (`dashboard/subida_partes/index.html`).
+def _nombre_seguro(relativo: str) -> str:
+    """Nombre plano para guardar un corte de la carpeta subida (sin separadores de ruta)."""
+    return re.sub(r"[^\w.\-]", "_", relativo.replace("\\", "/").replace("/", "__")).lstrip(".") or "corte"
 
-    El cargador normal manda el archivo en una sola petición; detrás del túnel de Cloudflare esa petición se corta
-    por tiempo con archivos grandes o redes lentas. Aquí el navegador manda una parte, Python la agrega a un temporal
-    y la confirma (`ack`), y solo entonces llega la siguiente. Devuelve (ruta, nombre) cuando el archivo está completo.
+
+def subida_por_partes(modo: str = "volumen", trozo_mb: float = 4.0) -> dict | None:
+    """Subida de un CT por partes por el websocket de Streamlit (`dashboard/subida_partes/index.html`).
+
+    `modo`: "volumen" (un archivo .mha / .nii / .nii.gz) o "serie" (una carpeta con un archivo por corte).
+    El cargador normal de Streamlit manda el archivo en una sola petición, que detrás del túnel de Cloudflare se corta
+    por tiempo con archivos grandes o redes lentas. Aquí el navegador manda un mensaje, Python lo guarda en un temporal
+    y lo confirma (`ack`), y solo entonces llega el siguiente. Devuelve {"ruta", "nombre"} cuando terminó: la ruta del
+    archivo (volumen) o de la carpeta con los cortes (serie).
     """
     import streamlit.components.v1 as components
 
     comp = components.declare_component("subida_por_partes", path=str(_SUBIDA_DIR))
-    s = st.session_state.setdefault("_subida", {"id": None, "ruta": None, "recibidas": -1, "ack": None,
-                                                "nombre": None, "lista": False})
-    valor = comp(ack=s["ack"], trozo_mb=trozo_mb, key="subida_por_partes", default=None)
-    if isinstance(valor, (bytes, bytearray)) and len(valor) >= _CABECERA:
-        cab = json.loads(bytes(valor[:_CABECERA]).decode("utf-8").strip())
-        if cab["id"] != s["id"] and cab["i"] == 0:             # archivo nuevo: temporal nuevo
-            sufijo = "".join(Path(cab["nombre"]).suffixes[-2:]) or ".mha"
-            with tempfile.NamedTemporaryFile(delete=False, suffix=sufijo) as tmp:
-                ruta = tmp.name
-            s.update(id=cab["id"], ruta=ruta, recibidas=-1, nombre=cab["nombre"], lista=False)
+    s = st.session_state.setdefault(f"_subida_{modo}", {"id": None, "ruta": None, "recibidas": -1, "ack": None,
+                                                        "nombre": None, "lista": False, "cortes": 0})
+    valor = comp(modo=modo, ack=s["ack"], trozo_mb=trozo_mb, key=f"subida_{modo}", default=None)
+    if isinstance(valor, (bytes, bytearray)) and len(valor) > 4:
+        largo = int.from_bytes(valor[:4], "big")
+        cab = json.loads(bytes(valor[4:4 + largo]).decode("utf-8"))
+        datos = memoryview(valor)[4 + largo:]
+        if cab["id"] != s["id"] and cab["i"] == 0:             # subida nueva: temporal nuevo
+            if modo == "serie":
+                ruta = tempfile.mkdtemp(prefix="cortes_")
+            else:
+                sufijo = "".join(Path(cab["nombre"]).suffixes[-2:]) or ".mha"
+                with tempfile.NamedTemporaryFile(delete=False, suffix=sufijo) as tmp:
+                    ruta = tmp.name
+            s.update(id=cab["id"], ruta=ruta, recibidas=-1, nombre=cab["nombre"], lista=False, cortes=0)
         if cab["id"] == s["id"] and cab["i"] == s["recibidas"] + 1:
-            with open(s["ruta"], "ab") as f:
-                f.write(valor[_CABECERA:])
+            if modo == "serie":                                # cada mensaje trae uno o más cortes completos
+                pos = 0
+                for a in cab["archivos"]:
+                    (Path(s["ruta"]) / _nombre_seguro(a["nombre"])).write_bytes(datos[pos:pos + a["tam"]])
+                    pos += a["tam"]
+                s["cortes"] += len(cab["archivos"])
+                completo = s["cortes"] == cab["total"]
+            else:
+                with open(s["ruta"], "ab") as f:
+                    f.write(datos)
+                completo = Path(s["ruta"]).stat().st_size == cab["tam"]
             s["recibidas"] = cab["i"]
-            s["lista"] = cab["i"] == cab["n"] - 1 and Path(s["ruta"]).stat().st_size == cab["tam"]
+            s["lista"] = cab["i"] == cab["n"] - 1 and completo
             s["ack"] = f"{cab['id']}:{cab['i']}"
-            st.rerun()                                         # el componente recibe el `ack` y manda la parte siguiente
-    return (s["ruta"], s["nombre"]) if s["lista"] and Path(s["ruta"]).exists() else None
+            st.rerun()                                         # el componente recibe el `ack` y manda lo siguiente
+    return {"ruta": s["ruta"], "nombre": s["nombre"]} if s["lista"] and Path(s["ruta"]).exists() else None
+
+
+def _orden_natural(p: Path) -> list:
+    """corte_2 antes que corte_10."""
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", p.name)]
+
+
+@st.cache_resource(show_spinner="Uniendo los cortes…", max_entries=3)
+def _apilar_cortes(carpeta: str):
+    """Apila los cortes de la carpeta en un volumen 3D. Devuelve (imagen, distancia z de los archivos o None).
+
+    Si los cortes son volúmenes de un solo corte (traen su posición), se ordenan por esa posición y la distancia
+    entre cortes sale de ella. Si son imágenes 2D (no la traen), se ordenan por nombre en orden natural y la
+    distancia queda en None: la pide el dashboard."""
+    import SimpleITK as sitk
+
+    archivos = sorted((p for p in Path(carpeta).iterdir() if p.name.lower().endswith(_EXT_CORTE)), key=_orden_natural)
+    if not archivos:
+        raise ValueError("La carpeta no tiene cortes .mha, .nii o .nii.gz")
+    cortes, posiciones, origenes, ref = [], [], [], None
+    for p in archivos:
+        img = sitk.ReadImage(str(p))
+        if img.GetDimension() == 3:
+            if img.GetSize()[2] != 1:
+                raise ValueError(f"{p.name} tiene {img.GetSize()[2]} cortes: se esperaba un corte por archivo "
+                                 "(un volumen completo se sube como «Volumen»)")
+            normal = np.array(img.GetDirection()).reshape(3, 3)[:, 2]
+            posiciones.append(float(np.dot(img.GetOrigin(), normal)))
+            origenes.append(img.GetOrigin())
+            if ref is None:
+                ref = img
+            img = img[:, :, 0]
+        elif img.GetDimension() != 2:
+            raise ValueError(f"{p.name}: se esperaba una imagen 2D (un corte)")
+        cortes.append(img)
+    if len({c.GetSize() for c in cortes}) > 1:
+        raise ValueError("Los cortes no tienen todos el mismo tamaño")
+    dz = None
+    if len(posiciones) == len(cortes) and len(cortes) > 1:     # todos traen su posición: orden por posición
+        orden = np.argsort(posiciones)
+        cortes = [cortes[k] for k in orden]
+        origenes = [origenes[k] for k in orden]
+        paso = float(np.median(np.diff(np.sort(posiciones))))
+        dz = paso if paso > 1e-3 else None
+    vol = sitk.JoinSeries(cortes)
+    if ref is not None:
+        vol.SetDirection(ref.GetDirection())
+        vol.SetOrigin(origenes[0])
+    return vol, dz
+
+
+@st.cache_data(show_spinner=False, max_entries=6)
+def volumen_desde_cortes(carpeta: str, dz: float | None = None) -> dict:
+    """Volumen .mha armado con los cortes de la carpeta: {"ruta", "cortes", "dz", "dz_archivo"}.
+
+    `dz` (mm) es la distancia entre cortes; si es None se usa la de los archivos o, si no la traen, 1,0 mm.
+    El .mha queda en una carpeta hermana de la de los cortes, un archivo por distancia."""
+    import SimpleITK as sitk
+
+    vol, dz_archivo = _apilar_cortes(carpeta)
+    dz = float(dz or dz_archivo or 1.0)
+    vol = sitk.Image(vol)                                      # copia: no tocar la imagen cacheada
+    sx, sy, _ = vol.GetSpacing()
+    vol.SetSpacing((sx, sy, dz))
+    destino = Path(carpeta + "_volumen")
+    destino.mkdir(exist_ok=True)
+    ruta = destino / f"volumen_dz{dz:.3f}.mha"
+    if not ruta.exists():
+        sitk.WriteImage(vol, str(ruta), True)
+    return {"ruta": str(ruta), "cortes": vol.GetSize()[2], "dz": dz, "dz_archivo": dz_archivo}
 
 
 @st.cache_data(show_spinner="Cargando volumen…", max_entries=3)
@@ -106,6 +182,14 @@ def cargar_modelo(run: str = config.DASH_MODEL_RUN):
     from src import inference
 
     return inference.load_model(run)
+
+
+@st.cache_resource
+def _candado_inferencia() -> threading.Lock:
+    """Un solo pipeline a la vez en todo el servidor: si dos personas piden inferencia al mismo tiempo (por ejemplo,
+    por el túnel), la segunda espera a que termine la primera en vez de correr las dos sobre la misma GPU (el doble de
+    memoria y resultados dañados por la competencia)."""
+    return threading.Lock()
 
 
 CACHE_DISCO = config.RESULTS_DIR / "dashboard_cache"       # predicciones guardadas (se puede borrar sin riesgo)
@@ -158,8 +242,11 @@ def resultado_inferencia(ruta: str, run: str = config.DASH_MODEL_RUN) -> dict:
     clave = _clave_disco(ruta, run)
     res = _leer_disco(clave)
     if res is None:
-        res = inference.predict_case(pre.reorient(pre.load_volume(ruta)), cargar_modelo(run))
-        _guardar_disco(clave, res)
+        with _candado_inferencia():
+            res = _leer_disco(clave)                               # pudo quedar listo mientras esperaba el candado
+            if res is None:
+                res = inference.predict_case(pre.reorient(pre.load_volume(ruta)), cargar_modelo(run))
+                _guardar_disco(clave, res)
     # Cajas indexadas por corte: el visor por corte no recorre todas en cada movimiento del slider
     por_corte: dict[int, list] = {}
     for caja in res["cajas"]:
