@@ -184,34 +184,120 @@ PROBE_BONE_THR = 0.1                        # píxel de hueso: intensidad > 0,1
 TARGETS = {"mAP50": 0.80, "mAP50_95": 0.60, "mIoU": 0.75, "macro_f1": 0.90}
 
 # =====================================================================================
-# Modelo 3D: backbone Fundidora 3D (encoder + decoder U-Net hasta P2) + detección 2D por corte
-# (C.cambios/propuesta_red_3d.md). Por ahora solo detección; la segmentación aún no se hace.
-# Un paso = un CT completo. Pérdida y anclas: las del 2.5D (LAMBDAS, ANCHORS).
+# Modelo 3D multitarea:
+# backbone Fundidora 3D + detección class-agnostic por corte +
+# segmentación fondo/hueso/borde + clasificación anatómica por instancia.
+# El decoder U-Net recupera resolución hasta P0.
 # =====================================================================================
 
-M3D_RUN_CBAM = "unet3d_cbam"
-M3D_RUN_NO_CBAM = "unet3d_sin_cbam"
+M3D_RUN_CBAM = "unet3d_cbam_trab"          # D-87: CBAM en enc4, P3 y detección + canal trabecular
+M3D_RUN_SE = "unet3d_se_trab"               # P-19: igual, con solo atención de canal (squeeze-excitation)
+M3D_RUN_NO_CBAM = "unet3d_sin_atencion"
+M3D_RUN_PREV = "unet3d_cbam"                # modelo entregado en el avance de la semana 10 (CBAM en enc3 y enc4, 1 canal)
+M3D_ATTENTION = "cbam"                      # "cbam" | "se" | "none" (`model3d train --attention`)
+M3D_TRAB_WINDOW = (100.0, 700.0)            # D-83: segundo canal de entrada, ventana trabecular (HU); None = 1 canal
+M3D_DECODER_ATTENTION = ("p3",)             # D-84: atención en la primera capa del decoder (P3)
+# D-90 (colapso del 2026-10-09: P0 con ReLU muertas en sacro y coxal derecho). LeakyReLU en el decoder (no hay
+# neuronas muertas) y supervisión profunda: una segunda salida semántica sobre P1 (128³) con su propia pérdida.
+M3D_DECODER_ACT = "leaky"                   # "leaky" | "relu" (modelos anteriores)
+M3D_LEAKY_SLOPE = 0.01
+M3D_SEG_AUX = True                          # salida semántica auxiliar sobre P1 (solo entrenamiento)
+M3D_SEG_AUX_WEIGHT = 0.5                    # L_seg = L(P0) + 0,5 · L(P1)
+M3D_MIN_BONE_DICE = 0.5                     # control: el overfit y la validación (desde la época 10) avisan si algún
+                                            # hueso queda por debajo (colapso de una clase)
+
+# Cabeza de máscara tipo Mask R-CNN (D-82, D-88): para cada caja axial, ROI Align de P2 y P1 (cortes axiales) y del CT
+# a doble resolución en el plano; rama de máscara (una por clase) y rama de clase (la cabeza de clasificación).
+M3D_MASK_HEAD = True
+M3D_HIRES_FACTOR = 2                        # CT y máscara a 400/512 = 0,78 mm por píxel en el plano (mismos 256 cortes)
+M3D_HIRES_DIR = DATA_ROOT / f"cache_cubo_{int(CUBE_MM)}mm_{INPUT_SIZE}_axial{INPUT_SIZE * M3D_HIRES_FACTOR}"
+M3D_ROI_FEAT = 48                           # lado del ROI Align de las características (P2 y P1)
+M3D_MASK_SIZE = 96                          # lado de la máscara de cada caja (ROI Align del CT a 0,78 mm)
+M3D_MASK_CHANNELS = 64                      # canales de la rama de máscara
+M3D_MASK_DETACH = True                      # D-88: la pérdida de la cabeza no llega al backbone (el detector no cambia)
+M3D_MASK_JITTER = 0.10                      # entrenamiento: cajas reales movidas/escaladas hasta ±10 % de su lado
+M3D_MASK_SCORE_THR = 0.5                    # inferencia: cajas con puntaje ≥ este valor pasan a la cabeza de máscara
+M3D_MASK_THR = 0.5                          # probabilidad mínima de la máscara para marcar el píxel
+M3D_MASK_CHUNK = 32                         # cortes por lote al aplicar la cabeza en inferencia
+M3D_FUSION_MODE = "union_sacro"             # D-93: postproceso que une las dos salidas (`model3d.fuse_heads`); elegido en validación
 M3D_INPUT = 256                             # lado del cubo que entra a la red (se reduce del caché de 256³ si es menor)
 M3D_WIDTHS = (16, 32, 64, 128)              # canales de los 4 bloques del encoder FundidoraPC 3D
-M3D_NECK = 256                              # canales del cuello dilatado (BOTTLENECK_DILATIONS)
-M3D_DECODER = (64, 32)                      # canales de P3 (1/8) y P2 (1/4)
-M3D_CBAM_BLOCKS = (3, 4)                    # CBAM 3D + γ en los bloques 3 y 4 (antes de la bifurcación)
+M3D_NECK = 128                              # D-70: cuello de 2 conv dilatadas (BOTTLENECK_DILATIONS) sin subir canales
+                                            # (estructura de la clase 9.2 + dilatación; antes 256 = 70 % de los parámetros)
+M3D_DECODER = (64, 32, 16, 8)               # canales de P3 (1/8), P2 (1/4), P1 (1/2) y P0 (1/1); P0 con 16
+                                            # no cabe en 6 GB (D-65)
+
+# D-81 (asesoría del 2026-10-08): una sola cabeza de segmentación con tres máscaras, sacro, coxal izquierdo y coxal
+# derecho (más el fondo). Cada hueso es una instancia con TODOS sus fragmentos: el profesor pidió no separar los
+# fragmentos pequeños de su hueso ("si quedaban separados, tocaba unirlos"). El Dice se mide por hueso y su macro.
+# Inferencia: etapa 1 = regiones detectadas (cajas axiales); etapa 2 = máscara de cada hueso dentro de ellas.
+M3D_SEM_CLASSES = 4
+M3D_SEG_CE_WEIGHT = 0.5                     # pérdida de segmentación = 0,5 · CE + 0,5 · Dice multiclase, sin peso por
+M3D_SEG_DICE_WEIGHT = 0.5                   # clase ("Dice + entropía cruzada: perfecto", asesoría 2026-10-08)
+M3D_RESTRICT_TO_DETECTION = True            # etapa 1: solo el hueso dentro de las regiones detectadas (cajas axiales)
+
+# Cabeza de clasificación: sacro, coxal izquierdo y coxal derecho.
+M3D_CLS_CLASSES = 3
+M3D_CLS_HIDDEN = 64
+
+# Detección 3D por corte: una salida de objectness, sin clase anatómica.
+M3D_DET_CLASSES = 1
+M3D_DET_VIEWS = ("axial",)                 # D-78: solo la cabeza axial (la única que usa el pipeline: las regiones 3D
+                                            # salen de ella; la coronal era la peor). Antes: axial, coronal y sagital.
+M3D_MAX_DET = 3
+# Reconstrucción de regiones e instancias durante inferencia.
+M3D_TRACK_IOU = 0.3
+M3D_MIN_INSTANCE_VOXELS = 50
+M3D_MIN_FRAGMENT_MM3 = 50 * VOXEL_MM ** 3        # fragmento mínimo para la distancia de separación (≈ 191 mm³ =
+                                            # 50 vóxeles del cubo), medido en el espacio original del CT
+M3D_CONNECTIVITY = 6                        # D-71: vecindad de los componentes conexos 3D (6, 18 o 26)
+
+# Pesos λ de la pérdida multitarea: L = λ_det · (BCE obj + SmoothL1 caja) + λ_seg · L_seg + λ_anat · CE, con
+# L_seg = 0,5 · CE + 0,5 · Dice de los tres huesos (D-81).
+# λ_t = prioridad_t / pérdida inicial_t: al inicio cada tarea aporta a la pérdida total en la proporción de su
+# prioridad, sin importar la escala natural de su pérdida (Dice + BCE ≈ 2, CE con 3 clases ≈ ln 3 ≈ 1,1).
+# Prioridades: segmentación > detección = clasificación (la segmentación de instancia es la tarea más difícil y
+# de ella dependen la clasificación de fragmentos y la distancia de separación).
+M3D_LOSS_PRIORITY = {"det": 1.5, "anat": 1.5, "seg": 2.0, "mask": 2.0}   # D-67: detección igualada a clasificación
+# Pérdida media de cada tarea con el modelo sin entrenar (semilla fija), medida con
+# `uv run python -m src.models.model3d calibrate` (salida en results/detection/lambda_calibration.json).
+M3D_CALIBRATION_CASES = 10                  # CT de train usados para medirla
+# Dentro de la detección (D-72), como en la clase 6.2: la caja se pondera para quedar en la escala del objectness,
+# λ_box = pérdida inicial de objectness / pérdida inicial de caja. L_det = BCE_obj + λ_box · SmoothL1.
+M3D_DET_INIT = {"obj": 0.6924, "box": 0.0932}     # medido 2026-10-09 (D-90: decoder LeakyReLU + salida auxiliar en P1) → λ_box 7,43
+M3D_BOX_WEIGHT = M3D_DET_INIT["obj"] / M3D_DET_INIT["box"]
+M3D_LOSS_INIT = {"det": 1.3847, "anat": 1.1029, "seg": 1.6201, "mask": 1.3477}   # medido 2026-10-09 (seg incluye 0,5 · auxiliar); vale para CBAM y SE (γ = 0 al inicio)
+M3D_LOSS_WEIGHTS = {t: M3D_LOSS_PRIORITY[t] / M3D_LOSS_INIT[t] for t in M3D_LOSS_PRIORITY}
+M3D_CBAM_BLOCKS = (4,)                      # D-87: atención + γ solo en el bloque 4 (el 3 terminó con γ ≈ 0)
 M3D_CHECKPOINT = True                       # gradient checkpointing en los niveles de alta resolución (GPU de 6 GB)
 # Detección 2D por corte: cortes de P3 y P2 interpolados en la posición del corte, llevados a la grilla
 # de 32 × 32 (STRIDE 8) y concatenados; cabeza con anclas por vista (AnchorHead del 2.5D).
 M3D_DET_SLICES = 32                         # cortes por vista y paso (con la mezcla NEG_FRAC)
-M3D_EPOCHS = 70                             # 70 CT por época; se puede seguir con --resume --epochs N
+M3D_EPOCHS = 140                            # la usuaria pidió 140 (2026-10-06); --resume --epochs N para seguir
 M3D_LR = 1e-3
 M3D_WEIGHT_DECAY = 1e-2
-M3D_WARMUP_EPOCHS = 3
 M3D_VAL_EVERY = 5                           # validar cada N épocas
 M3D_VAL_STRIDE = 3                          # en la validación, 1 de cada 3 cortes por vista (como el 2.5D)
-M3D_EARLY_STOP_PATIENCE = 4                 # validaciones sin mejorar val mAP50-95 (= 20 épocas)
-M3D_EARLY_STOP_START = 40                   # la parada temprana solo actúa desde esta época
+M3D_TRAIN_EVAL_CASES = 15                   # CT fijos de train (sin aumento) para las métricas de entrenamiento
+# best.pth es la época con mayor promedio de una métrica de validación por cabeza (D-66):
+# detección mAP50-95, segmentación Dice y clasificación macro F1.
+M3D_SELECT_METRICS = ("val_mAP50_95", "val_dice_sem", "val_dice_mask", "val_macro_f1")   # D-81: Dice macro de los tres huesos
 M3D_WORKERS = 2
 M3D_AUG_ROTATION_DEG = 10                   # rotación 3D (cada eje); el resto del aumento usa AUG_*
 M3D_OVERFIT_CASES = 2
 M3D_OVERFIT_ITERS = 300
+
+# Baseline SAM zero-shot con el modelo 3D (rúbrica 4.2; `scripts/run_sam_baseline_3d.py`)
+SAM_CHECKPOINT = PROJECT_ROOT / "models" / "sam" / "sam_vit_b_01ec64.pth"   # ViT-B oficial de Meta (no va al repo)
+M3D_SAM_SCORE_THR = 0.5                     # cajas axiales del modelo con puntaje ≥ este valor se usan como prompt
+
+# Evaluación final del modelo 3D (`model3d evaluate`, salida en results/detection/<run>/eval/)
+M3D_EVAL_SPLITS = ("val", "test")
+M3D_EVAL_STRIDE = 1                         # todos los cortes de cada vista (la validación del entrenamiento usa 3)
+M3D_REFINE_MARGINS = (0, 2, 4, 6, 8)        # px: ajuste de cada caja al hueso segmentado dentro de la caja ampliada;
+                                            # el margen se elige en val y se aplica tal cual en test
+M3D_EVAL_EXAMPLES = 3                       # CT de test que se guardan para las figuras cualitativas
+M3D_LATENCY_RUNS_GPU, M3D_LATENCY_RUNS_CPU = 5, 2   # repeticiones (tras 1 de calentamiento) del pipeline completo
 
 # =====================================================================================
 # EDA
@@ -222,3 +308,19 @@ EDA_CASE_ID = "004"                         # caso de las secciones de un solo c
 EDA_EXAMPLE_CASES = ("001", "002", "095", "023")
 EDA_HU_HIST_RANGE = (-3100, 4200)           # rango del histograma HU; fuera se acumula en los extremos
 ANISOTROPY_THRESHOLD = 1.5                  # razón máx/mín del espaciado a partir de la cual se marca
+
+# =====================================================================================
+# Dashboard (visualizador crudo; independiente de la ventana del modelo)
+# =====================================================================================
+
+DASH_HU_RANGE = (100, 600)                  # rango de hueso del visualizador crudo (lo, hi) en HU
+DASH_HU_CLIP_MAX = 1300
+DASH_MESH_STEP = 3                          # step_size de marching_cubes; menor = malla más detallada
+DASH_MIN_COMPONENT_MM3 = 1000               # descarta estructuras umbralizadas más pequeñas
+DASH_BONE_COLOR = "#e3d5b8"
+DASH_SLICE_WINDOW = (int(HU_WINDOW[0]), int(HU_WINDOW[1]))   # por defecto, la ventana del modelo
+# Run cuyo `best.pth` usa el dashboard como modelo de producción (una línea para cambiarlo).
+DASH_MODEL_RUN = M3D_RUN_CBAM
+# Salida de segmentación que muestra el dashboard: "fusion" (D-93), "mask" (cabeza de máscara) o "semantic".
+# Los modelos sin cabeza de máscara solo tienen "semantic".
+DASH_OUTPUT = "fusion"

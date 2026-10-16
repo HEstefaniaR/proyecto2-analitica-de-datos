@@ -365,6 +365,30 @@ class GatedCBAM(nn.Module):
         return x + self.gamma * self.cbam(x)
 
 
+class SE(nn.Module):
+    """Squeeze-and-excitation (Hu et al., 2018): solo atención de canal. avg-pool global -> MLP -> sigmoide."""
+
+    def __init__(self, channels: int, reduction: int = config.CBAM_REDUCTION):
+        super().__init__()
+        hidden = max(channels // reduction, 4)
+        self.mlp = nn.Sequential(nn.Conv2d(channels, hidden, 1), nn.ReLU(inplace=True), nn.Conv2d(hidden, channels, 1))
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.mlp(F.adaptive_avg_pool2d(x, 1)))
+
+
+class GatedSE(nn.Module):
+    """y = x + γ · SE(x), con γ aprendible desde `config.GAMMA_INIT` (igual que GatedCBAM)."""
+
+    def __init__(self, channels: int):
+        super().__init__()
+        self.se = SE(channels)
+        self.gamma = nn.Parameter(torch.tensor(float(config.GAMMA_INIT)))
+
+    def forward(self, x):
+        return x + self.gamma * self.se(x)
+
+
 class UpBlock(nn.Module):
     """Interpolación bilineal ×2 + conv 1x1 (mitad de canales) -> concat skip -> 2 x (Conv3x3+BN+ReLU).
 
@@ -445,12 +469,14 @@ class AnchorHead(nn.Module):
     """Cabeza con anclas, como la RPNHead del taller 3: conv 3x3 + ReLU compartida, atención
     (CBAM + γ, si `attention`) y, por cada ancla de cada celda, un logit por clase y 4 offsets."""
 
-    def __init__(self, in_channels: int, num_classes: int, num_anchors: int, attention: bool):
+    def __init__(self, in_channels: int, num_classes: int, num_anchors: int, attention):
         super().__init__()
         mid = config.HEAD_CHANNELS
         self.num_classes, self.num_anchors = num_classes, num_anchors
         self.conv = nn.Conv2d(in_channels, mid, 3, padding=1)
-        self.attn = GatedCBAM(mid) if attention else nn.Identity()
+        # attention: True / "cbam" -> CBAM + γ; "se" -> squeeze-excitation + γ; False / "none" -> sin atención
+        kind = {True: "cbam", False: "none"}.get(attention, attention)
+        self.attn = {"cbam": GatedCBAM, "se": GatedSE}[kind](mid) if kind != "none" else nn.Identity()
         self.cls = nn.Conv2d(mid, num_anchors * num_classes, 1)
         self.reg = nn.Conv2d(mid, num_anchors * 4, 1)
 

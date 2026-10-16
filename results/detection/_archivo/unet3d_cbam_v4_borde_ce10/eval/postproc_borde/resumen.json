@@ -1,0 +1,22 @@
+{
+  "mejor_val": {
+    "umbral": "0.05",
+    "metodo": "cc+recrecer",
+    "dice_frag": 0.5031094967617515,
+    "instancias_de_mas": 4.666666666666667
+  },
+  "test": [
+    {
+      "umbral": "0.05",
+      "metodo": "cc+recrecer",
+      "dice_frag": 0.4718723365040912,
+      "instancias_de_mas": 5.266666666666667
+    },
+    {
+      "umbral": "argmax",
+      "metodo": "cc",
+      "dice_frag": 0.46933518700349663,
+      "instancias_de_mas": 5.066666666666666
+    }
+  ]
+}

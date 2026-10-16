@@ -1,0 +1,430 @@
+case_id,severity,flag,detail
+001,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+002,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+002,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+002,info,hu_range,"HU en [-1023, 4711]"
+002,info,crop_padding,37 % del recorte es relleno
+002,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+003,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+003,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+003,info,hu_range,"HU en [-1023, 16709]"
+003,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+004,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+004,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+004,info,hu_range,"HU en [-1418, 4961]"
+004,info,crop_padding,43 % del recorte es relleno
+005,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+005,info,hu_range,"HU en [-1023, 4695]"
+006,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+006,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+006,info,crop_padding,36 % del recorte es relleno
+006,info,codes_not_sorted_by_volume,sacrum: los códigos no siguen el orden de volumen
+007,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+007,info,hu_range,"HU en [-1023, 19380]"
+008,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+008,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+009,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+009,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+009,info,crop_padding,45 % del recorte es relleno
+010,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+010,info,hu_range,"HU en [-2048, 7573]"
+010,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+011,info,spacing_outlier,"spacing_x = 0.976 fuera de [0.666, 0.973]"
+011,info,spacing_outlier,"spacing_y = 0.976 fuera de [0.666, 0.973]"
+011,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+011,info,hu_range,"HU en [-2285, 1677]"
+012,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+012,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+013,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+013,info,hu_range,"HU en [-1023, 16941]"
+014,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+014,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+014,info,hu_range,"HU en [-1023, 4420]"
+014,info,crop_padding,26 % del recorte es relleno
+015,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+015,info,crop_padding,34 % del recorte es relleno
+016,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+016,info,hu_range,"HU en [-1023, 3556]"
+016,revisar,crop_cuts_bone,2.39 % del hueso etiquetado queda fuera del recorte (2 fragmentos)
+016,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+017,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+017,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+018,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+019,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+019,info,hu_range,"HU en [-2048, 1727]"
+020,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+020,info,hu_range,"HU en [-2048, 3321]"
+021,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+021,info,hu_range,"HU en [-2048, 1677]"
+022,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+022,info,hu_range,"HU en [-1023, 5327]"
+023,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+023,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+024,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+024,info,hu_range,"HU en [-2048, 5237]"
+024,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+025,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+025,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+025,info,hu_range,"HU en [-1023, 12939]"
+025,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+026,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+026,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+027,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+027,info,hu_range,"HU en [-1024, 10827]"
+027,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+028,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+028,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+028,info,crop_padding,43 % del recorte es relleno
+028,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+029,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+029,info,hu_range,"HU en [-1023, 9989]"
+030,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+030,revisar,crop_cuts_bone,0.19 % del hueso etiquetado queda fuera del recorte (2 fragmentos)
+030,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+031,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+031,info,hu_range,"HU en [-1023, 3205]"
+031,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+032,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+032,info,hu_range,"HU en [-2048, 5754]"
+033,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+033,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+033,info,crop_padding,45 % del recorte es relleno
+034,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+034,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+035,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+035,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+035,info,hu_range,"HU en [-2048, 3549]"
+035,info,crop_padding,36 % del recorte es relleno
+036,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+036,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+036,info,hu_range,"HU en [-1023, 4150]"
+036,info,crop_padding,27 % del recorte es relleno
+036,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+037,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+037,info,hu_range,"HU en [-1023, 12340]"
+038,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+038,info,hu_range,"HU en [-2048, 1736]"
+039,revisar,spacing_anisotropy,máx/mín del espaciado = 1.53
+039,info,spacing_outlier,"spacing_x = 1.220 fuera de [0.666, 0.973]"
+039,info,spacing_outlier,"spacing_y = 1.220 fuera de [0.666, 0.973]"
+039,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+039,info,crop_padding,46 % del recorte es relleno
+039,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+040,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+040,info,hu_range,"HU en [-2048, 1753]"
+041,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+041,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+041,info,hu_range,"HU en [-2076, 1655]"
+041,info,crop_padding,26 % del recorte es relleno
+041,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+042,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+042,info,hu_range,"HU en [-2048, 1739]"
+042,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+043,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+044,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+044,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+044,info,crop_padding,58 % del recorte es relleno
+045,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+045,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+045,info,crop_padding,39 % del recorte es relleno
+045,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+046,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+046,info,hu_range,"HU en [-1023, 11480]"
+046,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+047,revisar,spacing_anisotropy,máx/mín del espaciado = 1.67
+047,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+048,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+049,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+049,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+050,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+050,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+050,info,hu_range,"HU en [-1023, 6916]"
+050,info,crop_padding,33 % del recorte es relleno
+050,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+051,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+051,info,hu_range,"HU en [-3376, 9741]"
+051,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+052,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+052,info,hu_range,"HU en [-2048, 1703]"
+053,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+053,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+054,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+054,info,hu_range,"HU en [-1023, 9015]"
+055,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+055,info,hu_range,"HU en [-1023, 23354]"
+055,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+056,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+056,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+056,info,crop_padding,32 % del recorte es relleno
+056,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+057,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+057,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+057,info,hu_range,"HU en [-1023, 16749]"
+057,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+058,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+058,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+058,info,hu_range,"HU en [-1023, 3873]"
+059,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+060,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+060,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+060,info,hu_range,"HU en [-2048, 2352]"
+060,info,crop_padding,35 % del recorte es relleno
+061,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+061,info,hu_range,"HU en [-2048, 1620]"
+061,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+062,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+062,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+062,info,crop_padding,37 % del recorte es relleno
+063,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+063,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+063,info,hu_range,"HU en [-1166, 1530]"
+063,info,crop_padding,45 % del recorte es relleno
+064,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+064,info,hu_range,"HU en [-2048, 1791]"
+064,info,codes_not_sorted_by_volume,sacrum: los códigos no siguen el orden de volumen
+064,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+065,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+065,info,hu_range,"HU en [-2602, 11341]"
+066,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+067,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+067,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+067,info,hu_range,"HU en [-2048, 3156]"
+067,info,crop_padding,40 % del recorte es relleno
+068,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+068,info,hu_range,"HU en [-6211, 30445]"
+068,info,codes_not_sorted_by_volume,sacrum: los códigos no siguen el orden de volumen
+069,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+069,info,hu_range,"HU en [-2048, 3077]"
+069,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+070,info,spacing_outlier,"spacing_x = 0.662 fuera de [0.666, 0.973]"
+070,info,spacing_outlier,"spacing_y = 0.662 fuera de [0.666, 0.973]"
+070,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+070,info,hu_range,"HU en [-2048, 1775]"
+071,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+071,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+071,info,crop_padding,48 % del recorte es relleno
+072,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+072,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+072,info,hu_range,"HU en [-1479, 7697]"
+072,info,crop_padding,33 % del recorte es relleno
+073,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+073,info,hu_range,"HU en [-1023, 6153]"
+073,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+074,info,spacing_outlier,"spacing_x = 0.976 fuera de [0.666, 0.973]"
+074,info,spacing_outlier,"spacing_y = 0.976 fuera de [0.666, 0.973]"
+074,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+074,info,hu_range,"HU en [-2913, 15467]"
+075,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+076,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+076,info,hu_range,"HU en [-2048, 1695]"
+076,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+077,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+077,info,hu_range,"HU en [-2048, 1749]"
+077,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+078,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+078,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+078,info,hu_range,"HU en [-2359, 1782]"
+078,info,crop_padding,40 % del recorte es relleno
+079,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+079,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+079,info,crop_padding,49 % del recorte es relleno
+080,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+080,info,hu_range,"HU en [-1023, 47685]"
+081,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+081,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+081,info,hu_range,"HU en [-2048, 1872]"
+081,info,crop_padding,42 % del recorte es relleno
+082,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+082,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+082,info,crop_padding,29 % del recorte es relleno
+083,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+083,info,hu_range,"HU en [-1023, 4859]"
+084,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+084,info,hu_range,"HU en [-1023, 19419]"
+085,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+085,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+085,info,hu_range,"HU en [-1023, 3648]"
+085,info,crop_padding,39 % del recorte es relleno
+085,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+086,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+086,revisar,spacing_anisotropy,máx/mín del espaciado = 1.52
+086,info,spacing_outlier,"spacing_x = 0.658 fuera de [0.666, 0.973]"
+086,info,spacing_outlier,"spacing_y = 0.658 fuera de [0.666, 0.973]"
+086,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+086,info,crop_padding,49 % del recorte es relleno
+087,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+087,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+087,info,hu_range,"HU en [-1023, 9618]"
+087,info,crop_padding,32 % del recorte es relleno
+087,info,codes_not_sorted_by_volume,sacrum: los códigos no siguen el orden de volumen
+087,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+088,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+088,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+088,info,crop_padding,36 % del recorte es relleno
+089,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+090,info,spacing_outlier,"spacing_x = 0.976 fuera de [0.666, 0.973]"
+090,info,spacing_outlier,"spacing_y = 0.976 fuera de [0.666, 0.973]"
+090,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+090,info,hu_range,"HU en [-2048, 1756]"
+090,info,codes_not_sorted_by_volume,right_hipbone: los códigos no siguen el orden de volumen
+091,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+091,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+092,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+093,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+093,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+094,info,spacing_outlier,"spacing_x = 0.976 fuera de [0.666, 0.973]"
+094,info,spacing_outlier,"spacing_y = 0.976 fuera de [0.666, 0.973]"
+094,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+094,info,hu_range,"HU en [-2048, 1779]"
+095,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+095,revisar,bone_hu_low,mediana HU dentro de la máscara = 79
+095,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+096,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+096,info,hu_range,"HU en [-3193, 13843]"
+097,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+098,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+098,info,hu_range,"HU en [-2048, 1924]"
+099,info,direction_not_identity,dirección original -1 0 0 0 -1 0 0 0 1 (orientación LPI); el pipeline la reorienta
+099,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+099,info,crop_padding,47 % del recorte es relleno
+100,info,spacing_fields_differ,ElementSpacing distinto de ITK_original_spacing
+100,info,hu_range,"HU en [-6152, 24970]"
+100,info,codes_not_sorted_by_volume,left_hipbone: los códigos no siguen el orden de volumen
+001,info,fragment_multi_component_6_only,código 11: 2 componentes solo con 6 vecinos
+001,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 100.0%
+002,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 100.0%
+003,info,fragment_multi_component_6_only,código 12: 3 componentes solo con 6 vecinos
+005,info,fragment_multi_component_6_only,código 1: 2 componentes solo con 6 vecinos
+006,revisar,fragment_multi_component_26,código 1: 8 componentes (26 vecinos); mayor = 100.0%
+006,revisar,fragment_multi_component_26,código 2: 3 componentes (26 vecinos); mayor = 100.0%
+006,revisar,fragment_multi_component_26,código 3: 3 componentes (26 vecinos); mayor = 99.8%
+006,revisar,fragment_multi_component_26,código 4: 2 componentes (26 vecinos); mayor = 100.0%
+007,info,fragment_multi_component_6_only,código 1: 2 componentes solo con 6 vecinos
+007,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 100.0%
+008,revisar,fragment_multi_component_26,código 12: 3 componentes (26 vecinos); mayor = 99.2%
+009,info,fragment_multi_component_6_only,código 22: 2 componentes solo con 6 vecinos
+011,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+013,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 99.9%
+014,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+014,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 99.5%
+016,revisar,fragment_multi_component_26,código 22: 4 componentes (26 vecinos); mayor = 98.8%
+017,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 99.9%
+018,revisar,fragment_multi_component_26,código 21: 3 componentes (26 vecinos); mayor = 100.0%
+021,info,fragment_multi_component_6_only,código 12: 2 componentes solo con 6 vecinos
+021,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 100.0%
+021,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 99.9%
+023,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+023,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 72.1%
+024,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 99.9%
+025,info,fragment_multi_component_6_only,código 13: 2 componentes solo con 6 vecinos
+025,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 100.0%
+025,revisar,fragment_multi_component_26,código 24: 2 componentes (26 vecinos); mayor = 100.0%
+027,revisar,fragment_multi_component_26,código 1: 3 componentes (26 vecinos); mayor = 99.8%
+027,revisar,fragment_multi_component_26,código 21: 2 componentes (26 vecinos); mayor = 100.0%
+028,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 99.5%
+028,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 99.7%
+031,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 99.0%
+031,revisar,fragment_multi_component_26,código 21: 2 componentes (26 vecinos); mayor = 99.9%
+031,revisar,fragment_multi_component_26,código 22: 3 componentes (26 vecinos); mayor = 100.0%
+031,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 100.0%
+032,info,fragment_multi_component_6_only,código 21: 2 componentes solo con 6 vecinos
+032,info,fragment_multi_component_6_only,código 22: 2 componentes solo con 6 vecinos
+033,revisar,fragment_multi_component_26,código 1: 4 componentes (26 vecinos); mayor = 100.0%
+033,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 100.0%
+033,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 99.9%
+034,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+035,revisar,fragment_multi_component_26,código 11: 3 componentes (26 vecinos); mayor = 100.0%
+035,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 99.5%
+036,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+036,info,fragment_multi_component_6_only,código 14: 4 componentes solo con 6 vecinos
+037,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 99.9%
+038,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 99.9%
+039,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 96.0%
+040,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+041,revisar,fragment_multi_component_26,código 2: 4 componentes (26 vecinos); mayor = 85.9%
+044,revisar,fragment_multi_component_26,código 21: 3 componentes (26 vecinos); mayor = 100.0%
+044,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 98.8%
+045,revisar,fragment_multi_component_26,código 2: 5 componentes (26 vecinos); mayor = 86.9%
+046,revisar,fragment_multi_component_26,código 23: 3 componentes (26 vecinos); mayor = 100.0%
+046,revisar,fragment_multi_component_26,código 24: 2 componentes (26 vecinos); mayor = 98.9%
+047,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+047,info,fragment_multi_component_6_only,código 13: 2 componentes solo con 6 vecinos
+049,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+049,info,fragment_multi_component_6_only,código 12: 2 componentes solo con 6 vecinos
+050,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 100.0%
+051,revisar,fragment_multi_component_26,código 21: 2 componentes (26 vecinos); mayor = 100.0%
+051,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 100.0%
+052,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 99.8%
+052,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 99.6%
+052,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 100.0%
+052,revisar,fragment_small,código 23: 282 mm³
+054,revisar,fragment_multi_component_26,código 22: 4 componentes (26 vecinos); mayor = 100.0%
+056,info,fragment_multi_component_6_only,código 24: 3 componentes solo con 6 vecinos
+057,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+058,revisar,fragment_multi_component_26,código 1: 3 componentes (26 vecinos); mayor = 99.6%
+058,info,fragment_multi_component_6_only,código 12: 3 componentes solo con 6 vecinos
+058,revisar,fragment_multi_component_26,código 13: 2 componentes (26 vecinos); mayor = 100.0%
+061,revisar,fragment_multi_component_26,código 21: 2 componentes (26 vecinos); mayor = 100.0%
+062,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+062,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 100.0%
+063,revisar,fragment_multi_component_26,código 2: 4 componentes (26 vecinos); mayor = 98.4%
+063,revisar,fragment_multi_component_26,código 3: 5 componentes (26 vecinos); mayor = 76.6%
+064,revisar,fragment_multi_component_26,código 2: 5 componentes (26 vecinos); mayor = 75.4%
+064,revisar,fragment_multi_component_26,código 3: 3 componentes (26 vecinos); mayor = 98.8%
+064,revisar,fragment_multi_component_26,código 22: 3 componentes (26 vecinos); mayor = 100.0%
+065,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+066,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 99.9%
+066,revisar,fragment_multi_component_26,código 14: 2 componentes (26 vecinos); mayor = 99.0%
+067,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 99.4%
+068,revisar,fragment_multi_component_26,código 3: 2 componentes (26 vecinos); mayor = 99.9%
+068,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 100.0%
+069,revisar,fragment_multi_component_26,código 1: 3 componentes (26 vecinos); mayor = 100.0%
+069,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 100.0%
+069,info,fragment_multi_component_6_only,código 12: 2 componentes solo con 6 vecinos
+069,info,fragment_multi_component_6_only,código 13: 4 componentes solo con 6 vecinos
+070,info,fragment_multi_component_6_only,código 1: 2 componentes solo con 6 vecinos
+070,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+071,info,fragment_multi_component_6_only,código 2: 2 componentes solo con 6 vecinos
+071,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 98.0%
+073,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 100.0%
+073,revisar,fragment_multi_component_26,código 23: 2 componentes (26 vecinos); mayor = 100.0%
+075,revisar,fragment_multi_component_26,código 2: 3 componentes (26 vecinos); mayor = 97.0%
+075,revisar,fragment_multi_component_26,código 3: 3 componentes (26 vecinos); mayor = 96.7%
+076,revisar,fragment_multi_component_26,código 11: 2 componentes (26 vecinos); mayor = 100.0%
+076,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 98.8%
+079,revisar,fragment_multi_component_26,código 12: 3 componentes (26 vecinos); mayor = 99.6%
+079,revisar,fragment_multi_component_26,código 13: 2 componentes (26 vecinos); mayor = 93.5%
+080,info,fragment_multi_component_6_only,código 1: 5 componentes solo con 6 vecinos
+080,revisar,fragment_multi_component_26,código 2: 3 componentes (26 vecinos); mayor = 100.0%
+080,info,fragment_multi_component_6_only,código 11: 2 componentes solo con 6 vecinos
+080,revisar,fragment_multi_component_26,código 21: 4 componentes (26 vecinos); mayor = 100.0%
+082,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 98.8%
+083,info,fragment_multi_component_6_only,código 1: 2 componentes solo con 6 vecinos
+083,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 99.8%
+084,revisar,fragment_multi_component_26,código 2: 5 componentes (26 vecinos); mayor = 93.9%
+084,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 98.5%
+085,revisar,fragment_small,código 2: 313 mm³
+085,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 99.7%
+086,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 100.0%
+086,revisar,fragment_multi_component_26,código 22: 2 componentes (26 vecinos); mayor = 99.9%
+087,revisar,fragment_multi_component_26,código 1: 3 componentes (26 vecinos); mayor = 99.9%
+087,info,fragment_multi_component_6_only,código 2: 2 componentes solo con 6 vecinos
+087,info,fragment_multi_component_6_only,código 3: 4 componentes solo con 6 vecinos
+088,revisar,fragment_multi_component_26,código 1: 4 componentes (26 vecinos); mayor = 100.0%
+090,info,fragment_multi_component_6_only,código 12: 2 componentes solo con 6 vecinos
+093,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 100.0%
+094,revisar,fragment_multi_component_26,código 2: 3 componentes (26 vecinos); mayor = 99.5%
+095,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 99.8%
+095,revisar,fragment_multi_component_26,código 13: 2 componentes (26 vecinos); mayor = 99.7%
+096,revisar,fragment_multi_component_26,código 1: 2 componentes (26 vecinos); mayor = 100.0%
+096,info,fragment_multi_component_6_only,código 11: 2 componentes solo con 6 vecinos
+096,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 100.0%
+097,revisar,fragment_multi_component_26,código 1: 4 componentes (26 vecinos); mayor = 100.0%
+097,revisar,fragment_multi_component_26,código 2: 6 componentes (26 vecinos); mayor = 97.9%
+097,info,fragment_multi_component_6_only,código 21: 8 componentes solo con 6 vecinos
+097,revisar,fragment_multi_component_26,código 22: 3 componentes (26 vecinos); mayor = 99.9%
+098,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 97.7%
+098,revisar,fragment_multi_component_26,código 12: 2 componentes (26 vecinos); mayor = 99.2%
+099,info,fragment_multi_component_6_only,código 12: 2 componentes solo con 6 vecinos
+100,revisar,fragment_multi_component_26,código 2: 2 componentes (26 vecinos); mayor = 99.9%
+100,info,fragment_multi_component_6_only,código 12: 4 componentes solo con 6 vecinos

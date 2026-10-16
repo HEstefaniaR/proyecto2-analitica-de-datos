@@ -16,9 +16,6 @@ import SimpleITK as sitk
 
 from src import config
 
-# Código de fragmento -> región: 1-10 sacro, 11-20 coxal izquierdo, 21-30 coxal derecho
-REGIONS = {"sacrum": range(1, 11), "left_hipbone": range(11, 21), "right_hipbone": range(21, 31)}
-
 
 def fracture_type(codes) -> str:
     """Tipo de fractura a partir de los códigos de fragmento presentes en la máscara.
@@ -26,7 +23,7 @@ def fracture_type(codes) -> str:
     Más de un fragmento en una región = región fracturada. PRD: sin fractura dentro de un hueso;
     UHF / BHF: coxal unilateral / bilateral; SF: sacro; SHF: sacro y coxal.
     """
-    n = {r: sum(int(c) in cods for c in codes) for r, cods in REGIONS.items()}
+    n = {r: sum(int(c) in cods for c in codes) for r, cods in config.REGION_CODES.items()}
     hips = int(n["left_hipbone"] > 1) + int(n["right_hipbone"] > 1)
     if n["sacrum"] > 1:
         return "SF" if hips == 0 else "SHF"
@@ -37,7 +34,9 @@ def list_cases() -> pd.DataFrame:
     """Un caso por máscara del dataset, con su tipo de fractura."""
     rows = []
     for path in sorted(config.LABEL_DIR.glob("*.mha")):
-        mask = sitk.GetArrayViewFromImage(sitk.ReadImage(str(path)))
+        # GetArrayFromImage copia los datos; una vista (GetArrayViewFromImage) sobre una imagen que
+        # no se guarda en una variable apunta a memoria que Python puede liberar en cualquier momento
+        mask = sitk.GetArrayFromImage(sitk.ReadImage(str(path)))
         codes = np.unique(mask)
         rows.append({"case_id": path.stem, "fracture_type": fracture_type(codes[codes > 0])})
     return pd.DataFrame(rows)

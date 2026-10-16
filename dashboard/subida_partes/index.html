@@ -1,0 +1,209 @@
+<!doctype html>
+<!-- Subida de un CT por partes (componente de Streamlit sin compilar).
+     Dos modos: "volumen" (un archivo .mha / .nii / .nii.gz) y "serie" (una carpeta con un archivo por corte).
+     El navegador manda los datos en mensajes de hasta `trozo_mb` por el websocket de Streamlit y espera la
+     confirmación de cada uno antes de mandar el siguiente: así ninguna petición larga se corta por tiempo detrás del
+     túnel. Cada mensaje = 4 bytes con el largo de la cabecera + cabecera JSON + bytes. En modo serie un mensaje
+     agrupa varios cortes completos (los cortes pesan poco y así no hay un rerun por corte). -->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+  :root { --primario: #ff4b4b; --fondo: #ffffff; --fondo2: #f0f2f6; --texto: #31333f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Source Sans 3", "Source Sans Pro", sans-serif; font-size: 14px;
+         color: var(--texto); background: transparent; }
+  #zona { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 1rem;
+          background: var(--fondo2); border: 1px solid transparent; border-radius: 0.5rem; transition: border-color 0.15s; }
+  #zona.encima { border-color: var(--primario); }
+  #icono { flex: none; width: 2.25rem; height: 2.25rem; opacity: 0.6; }
+  #textos { flex: 1 1 8rem; min-width: 0; }
+  #titulo { line-height: 1.3; }
+  #limite { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+  button { font: inherit; color: var(--texto); background: var(--fondo); cursor: pointer;
+           border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent); border-radius: 0.5rem;
+           padding: 0.25rem 0.75rem; min-height: 2.5rem; transition: color 0.15s, border-color 0.15s; }
+  button:hover { color: var(--primario); border-color: var(--primario); }
+  button:disabled { opacity: 0.5; cursor: default; color: var(--texto); border-color: color-mix(in srgb, var(--texto) 20%, transparent); }
+  #progreso { display: none; margin-top: 0.6rem; }
+  #barra { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--texto) 15%, transparent); overflow: hidden; }
+  #avance { height: 100%; width: 0%; background: var(--primario); transition: width 0.2s; }
+  #estado { margin-top: 4px; font-size: 12.5px; opacity: 0.8; word-break: break-word; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<div id="zona">
+  <svg id="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5"/><path d="M12 12v8"/><path d="m9 15 3-3 3 3"/>
+  </svg>
+  <div id="textos"><div id="titulo"></div><div id="limite"></div></div>
+  <button id="buscar" type="button"></button>
+  <input type="file" id="entrada">
+</div>
+<div id="progreso"><div id="barra"><div id="avance"></div></div><div id="estado"></div></div>
+<script>
+const EXT = [".mha", ".nii", ".nii.gz"];
+let trozo = 4 * 1024 * 1024;      // bytes por mensaje (lo fija Python con `trozo_mb`)
+let modo = null;                  // "volumen" o "serie" (lo fija Python)
+let ack = null;                   // última confirmación de Python: "<id>:<índice>"
+let esperando = null;             // resuelve la espera de la confirmación
+let subiendo = false;
+
+const $ = (id) => document.getElementById(id);
+function enviar(tipo, datos) { window.parent.postMessage({ isStreamlitMessage: true, type: tipo, ...datos }, "*"); }
+function alto() { enviar("streamlit:setFrameHeight", { height: document.body.scrollHeight + 2 }); }
+function estado(t, fraccion) {
+  $("progreso").style.display = "block";
+  $("estado").textContent = t;
+  if (fraccion !== undefined) $("avance").style.width = (100 * fraccion).toFixed(1) + "%";
+  alto();
+}
+const mb = (b) => (b / 1048576).toFixed(b < 10485760 ? 1 : 0);
+const valido = (nombre) => EXT.some((e) => nombre.toLowerCase().endsWith(e));
+
+function configurar(nuevo) {
+  modo = nuevo;
+  const serie = modo === "serie";
+  $("titulo").textContent = serie ? "Arrastra la carpeta de cortes aquí" : "Arrastra el volumen aquí";
+  $("limite").textContent = (serie ? "Un archivo por corte · " : "Un archivo · ") + "MHA, NII, NII.GZ · se sube por partes";
+  $("buscar").textContent = serie ? "Buscar carpeta" : "Buscar archivo";
+  const e = $("entrada");
+  e.value = "";
+  if (serie) { e.setAttribute("webkitdirectory", ""); e.multiple = true; e.removeAttribute("accept"); }
+  else { e.removeAttribute("webkitdirectory"); e.multiple = false; e.accept = ".mha,.nii,.gz"; }
+  alto();
+}
+
+window.addEventListener("message", (ev) => {
+  if (!ev.data || ev.data.type !== "streamlit:render") return;
+  const a = ev.data.args || {}, t = ev.data.theme;
+  if (a.trozo_mb) trozo = Math.round(a.trozo_mb * 1024 * 1024);
+  if (a.modo && a.modo !== modo) configurar(a.modo);
+  if (t) {
+    const r = document.documentElement.style;
+    if (t.primaryColor) r.setProperty("--primario", t.primaryColor);
+    if (t.backgroundColor) r.setProperty("--fondo", t.backgroundColor);
+    if (t.secondaryBackgroundColor) r.setProperty("--fondo2", t.secondaryBackgroundColor);
+    if (t.textColor) r.setProperty("--texto", t.textColor);
+  }
+  ack = a.ack || null;
+  if (esperando) esperando();
+  alto();
+});
+
+function confirmado(clave) {
+  return new Promise((resolver) => {
+    const revisar = () => { if (ack === clave) { esperando = null; resolver(); } };
+    esperando = revisar;
+    revisar();
+  });
+}
+
+async function mandar(cab, datos) {
+  const c = new TextEncoder().encode(JSON.stringify(cab));
+  const msg = new Uint8Array(4 + c.length + datos.length);
+  new DataView(msg.buffer).setUint32(0, c.length);
+  msg.set(c, 4);
+  msg.set(datos, 4 + c.length);
+  enviar("streamlit:setComponentValue", { value: msg, dataType: "bytes" });
+  await confirmado(cab.id + ":" + cab.i);
+}
+
+const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+async function subirArchivo(archivo) {
+  const id = nuevoId(), n = Math.max(1, Math.ceil(archivo.size / trozo)), t0 = performance.now();
+  for (let i = 0; i < n; i++) {
+    const datos = new Uint8Array(await archivo.slice(i * trozo, (i + 1) * trozo).arrayBuffer());
+    await mandar({ id, i, n, nombre: archivo.name, tam: archivo.size }, datos);
+    const hecho = Math.min((i + 1) * trozo, archivo.size), seg = (performance.now() - t0) / 1000;
+    estado(`Subiendo ${archivo.name}: ${mb(hecho)} de ${mb(archivo.size)} MB (${(hecho / 1048576 / seg).toFixed(1)} MB/s)`, (i + 1) / n);
+  }
+  estado(`Listo: ${archivo.name} (${mb(archivo.size)} MB)`, 1);
+}
+
+async function subirSerie(lista, carpeta) {
+  // lista: [{archivo, nombre}] con el nombre relativo dentro de la carpeta
+  const grupos = [];
+  let g = [], tam = 0;
+  for (const x of lista) {
+    if (g.length && tam + x.archivo.size > trozo) { grupos.push(g); g = []; tam = 0; }
+    g.push(x); tam += x.archivo.size;
+  }
+  if (g.length) grupos.push(g);
+  const id = nuevoId(), n = grupos.length, total = lista.reduce((s, x) => s + x.archivo.size, 0), t0 = performance.now();
+  let hecho = 0, cortes = 0;
+  for (let i = 0; i < n; i++) {
+    const partes = await Promise.all(grupos[i].map((x) => x.archivo.arrayBuffer()));
+    const datos = new Uint8Array(partes.reduce((s, p) => s + p.byteLength, 0));
+    let pos = 0;
+    for (const p of partes) { datos.set(new Uint8Array(p), pos); pos += p.byteLength; }
+    const archivos = grupos[i].map((x) => ({ nombre: x.nombre, tam: x.archivo.size }));
+    await mandar({ id, i, n, nombre: carpeta, total: lista.length, archivos }, datos);
+    hecho += datos.length; cortes += archivos.length;
+    const seg = (performance.now() - t0) / 1000;
+    estado(`Subiendo ${carpeta}: ${cortes} de ${lista.length} cortes, ${mb(hecho)} de ${mb(total)} MB (${(hecho / 1048576 / seg).toFixed(1)} MB/s)`, (i + 1) / n);
+  }
+  estado(`Listo: ${carpeta} (${lista.length} cortes, ${mb(total)} MB)`, 1);
+}
+
+async function empezar(tarea) {
+  if (subiendo) return;
+  subiendo = true; $("buscar").disabled = true;
+  try { await tarea(); }
+  catch (e) { estado("Error en la subida: " + e); }
+  finally { subiendo = false; $("buscar").disabled = false; $("entrada").value = ""; }
+}
+
+function serieDesde(lista) {
+  const cortes = lista.filter((x) => valido(x.nombre));
+  if (!cortes.length) { estado("La carpeta no tiene cortes .mha, .nii o .nii.gz", 0); return; }
+  const carpeta = cortes[0].nombre.includes("/") ? cortes[0].nombre.split("/")[0] : "cortes";
+  empezar(() => subirSerie(cortes, carpeta));
+}
+
+function volumenDesde(archivo) {
+  if (!valido(archivo.name)) { estado("El archivo debe ser .mha, .nii o .nii.gz", 0); return; }
+  empezar(() => subirArchivo(archivo));
+}
+
+$("buscar").addEventListener("click", () => $("entrada").click());
+$("entrada").addEventListener("change", (ev) => {
+  const fs = [...ev.target.files];
+  if (!fs.length) return;
+  if (modo === "serie") serieDesde(fs.map((f) => ({ archivo: f, nombre: f.webkitRelativePath || f.name })));
+  else volumenDesde(fs[0]);
+});
+
+// Arrastrar y soltar: un archivo (volumen), o una carpeta / varios archivos (serie)
+function leerEntrada(entrada) {
+  if (entrada.isFile) return new Promise((ok, mal) => entrada.file((f) => ok([{ archivo: f, nombre: entrada.fullPath.replace(/^\//, "") }]), mal));
+  const lector = entrada.createReader(), todas = [];
+  return new Promise((ok, mal) => {
+    const leer = () => lector.readEntries(async (es) => {
+      if (!es.length) { ok((await Promise.all(todas.map(leerEntrada))).flat()); return; }
+      todas.push(...es); leer();
+    }, mal);
+    leer();
+  });
+}
+const zona = $("zona");
+["dragenter", "dragover"].forEach((t) => zona.addEventListener(t, (ev) => { ev.preventDefault(); zona.classList.add("encima"); }));
+["dragleave", "drop"].forEach((t) => zona.addEventListener(t, () => zona.classList.remove("encima")));
+zona.addEventListener("drop", async (ev) => {
+  ev.preventDefault();
+  if (modo === "serie") {
+    const entradas = [...ev.dataTransfer.items].map((it) => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+    serieDesde((await Promise.all(entradas.map(leerEntrada))).flat());
+  } else if (ev.dataTransfer.files.length) volumenDesde(ev.dataTransfer.files[0]);
+});
+
+window.subirArchivo = subirArchivo;
+window.serieDesde = serieDesde;
+enviar("streamlit:componentReady", { apiVersion: 1 });
+alto();
+</script>
+</body>
+</html>
