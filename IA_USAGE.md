@@ -11,7 +11,6 @@
 
 - Cada entrada tiene el prompt, lo que respondió o propuso la IA, el código final y la decisión del equipo con su análisis crítico.
 - Las entradas están en **orden cronológico**, según la fecha en que la decisión quedó en el código (registro de decisiones del proyecto). Por eso Claude y ChatGPT aparecen intercalados.
-- Los prompts de Claude están resumidos por tema, con las decisiones que tomó el equipo. Los de ChatGPT son los que registró el equipo.
 
 ## Resumen
 

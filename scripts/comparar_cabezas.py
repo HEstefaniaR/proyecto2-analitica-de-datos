@@ -1,4 +1,4 @@
-"""Compara las dos salidas de segmentación del modelo 3D (cabeza semántica y cabeza de máscara, D-82) en la MISMA
+"""Compara las dos salidas de segmentación del modelo 3D (cabeza semántica y cabeza de máscara) en la MISMA
 rejilla, y guarda ejemplos con las salidas de todas las cabezas para el notebook 03.
 
     PYTORCH_ENABLE_MPS_FALLBACK=1 uv run python scripts/comparar_cabezas.py [--runs unet3d_cbam_trab unet3d_se_trab]

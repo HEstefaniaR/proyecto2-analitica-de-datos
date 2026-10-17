@@ -1,24 +1,19 @@
-"""Fundidora 3D multitarea para fracturas pélvicas PENGWIN.
+"""PelvicU-3D: modelo 3D multitarea para fracturas pélvicas PENGWIN.
 
 Pipeline:
-  cubo CT 256³
-  -> encoder FundidoraPC 3D
-  -> CBAM 3D
+  cubo CT 256³ (dos canales: ventana de hueso y ventana trabecular)
+  -> encoder U-Net 3D con atención (CBAM o squeeze-excitation, con γ) en el bloque 4
   -> cuello dilatado
-  -> decoder U-Net 3D hasta P0
+  -> decoder U-Net 3D hasta P0, con atención en P3
 
-Tres cabezas:
-  - detección class-agnostic 2D por corte sobre P3 + P2
-  - segmentación binaria hueso/fondo sobre P0
-  - clasificación anatómica de cada instancia usando P1
+Cabezas:
+  - detección class-agnostic 2D por corte axial sobre P3 + P2, con anclas y NMS propio
+  - segmentación semántica sobre P0: fondo, sacro, coxal izquierdo y coxal derecho
+  - máscara por caja (ROI Align de P2, P1 y del CT a doble resolución) con su rama de clase
 
-Durante entrenamiento:
-  las tres cabezas utilizan targets derivados del ground truth.
-
-Durante inferencia:
-  detección axial -> NMS -> agrupación de cajas entre cortes
-  -> regiones 3D -> segmentación restringida por región
-  -> componentes conexos -> clasificación de cada fragmento.
+Inferencia (`infer_ct`):
+  detección axial -> NMS -> regiones 3D -> segmentación restringida a las regiones -> máscara y clase de cada caja
+  -> fusión de la segmentación y la máscara (`fuse_heads`) -> vuelta a la rejilla original del CT.
 """
 
 import argparse
@@ -32,9 +27,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Con 6 GB de GPU (RTX 3060 Laptop) la fragmentación del asignador puede hacer que lo reservado pase de 6 GB
+# Con una GPU de 6 GB la fragmentación del asignador puede hacer que lo reservado pase de 6 GB
 # y Windows desborde a memoria compartida (mucho más lento). Debe fijarse antes de importar torch.
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")   # una operación del CBAM 3D no existe en la GPU del Mac
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,7 +39,7 @@ from torchvision.ops import roi_align
 
 from src import config
 from src.models import detection as det
-from src.models.detection import CLASSES, VIEWS, AnchorHead, GatedCBAM, GatedSE
+from src.models.detection import CLASSES, VIEWS, AnchorHead
 from src.models.segmentation import (
     SegmentationHead3D,
     _binary_scores,
@@ -75,7 +71,7 @@ BONE_THR = (config.BONE_HU - config.HU_WINDOW[0]) / (config.HU_WINDOW[1] - confi
 
 class VolumeDataset(torch.utils.data.Dataset):
     """Un CT del caché: (imagen uint8 (Z, Y, X), códigos de fragmento uint8, caso). Con `hires=True` agrega la imagen
-    y los códigos a doble resolución en el plano (Z, 2Y, 2X) para la cabeza de máscara (D-82):
+    y los códigos a doble resolución en el plano (Z, 2Y, 2X) para la cabeza de máscara:
     (img, msk, img_hr, msk_hr, caso)."""
 
     def __init__(self, case_ids, hires: bool = False):
@@ -104,7 +100,7 @@ def load_hires(cid: str):
 
 
 def build_hires_cache(overwrite: bool = False) -> None:
-    """Caché de la cabeza de máscara (D-82): cada CT y su máscara en la rejilla del cubo con el doble de resolución en
+    """Caché de la cabeza de máscara: cada CT y su máscara en la rejilla del cubo con el doble de resolución en
     el plano axial (512 × 512 a 0,78 mm, los mismos 256 cortes), `preprocessing.hires_geometry`. Mismo ventaneo."""
     from tqdm.auto import tqdm
     from src.dataset import preprocessing as pre
@@ -212,7 +208,7 @@ def view_counts(reg: torch.Tensor, view: str) -> torch.Tensor:
 
 def sample_slices(reg: torch.Tensor, x: torch.Tensor, view: str, n: int, gen: torch.Generator) -> torch.Tensor:
     """`n` cortes de la vista para la cabeza de detección: fracción `config.NEG_FRAC` sin regiones (de
-    preferencia con hueso por intensidad: negativos difíciles) y el resto con alguna región (como el 2.5D)."""
+    preferencia con hueso por intensidad: negativos difíciles) y el resto con alguna región."""
     counts = view_counts(reg, view)
     if view == "sagittal":
         counts = torch.stack([counts[:, 0], counts[:, 1] + counts[:, 2]], 1)
@@ -304,7 +300,7 @@ def current_arch() -> dict:
 
 
 def arch_from_config(cfg: dict) -> tuple[str, dict]:
-    """(atención, arquitectura) de un checkpoint. Los modelos anteriores al 2026-10-09 no guardan estas claves:
+    """(atención, arquitectura) de un checkpoint. Los checkpoints que no guardan estas claves usan:
     CBAM en los bloques 3 y 4, sin atención en el decoder, un solo canal de entrada, sin cabeza de máscara, ReLU en el
     decoder y sin salida semántica auxiliar."""
     attention = cfg.get("attention") or ("cbam" if cfg.get("cbam", True) else "none")
@@ -316,7 +312,7 @@ def arch_from_config(cfg: dict) -> tuple[str, dict]:
 
 
 def load_checkpoint(path) -> dict:
-    """`torch.load` de un checkpoint; los entrenados en Windows antes del 2026-10-09 guardaban rutas `WindowsPath` en
+    """`torch.load` de un checkpoint; los entrenados en Windows pueden guardar rutas `WindowsPath` en
     la configuración, que no se pueden abrir en macOS/Linux: se leen como rutas puras."""
     try:
         return torch.load(path, map_location="cpu", weights_only=False)
@@ -330,8 +326,8 @@ def load_checkpoint(path) -> dict:
 
 
 def load_model(ck: dict, device) -> "Fundidora3DDetector":
-    """Modelo de un checkpoint (`best.pth`), con su arquitectura. Ignora la cabeza de instancia de los modelos de la
-    opción A (D-77/D-80), que ya no se usa (D-81)."""
+    """Modelo de un checkpoint (`best.pth`), con su arquitectura. Ignora la cabeza de instancia (`inst_head`) si el
+    checkpoint la trae."""
     attention, arch = arch_from_config(ck["config"])
     model = Fundidora3DDetector(attention, arch).to(device).eval()
     model.load_state_dict({k: v for k, v in ck["model"].items() if not k.startswith("inst_head.")})
@@ -352,7 +348,7 @@ class Up3d(nn.Module):
         return self.conv(torch.cat([x, skip], 1))
 
 class RoiMaskHead(nn.Module):
-    """Cabeza tipo Mask R-CNN (D-82) sobre cada caja axial.
+    """Cabeza tipo Mask R-CNN sobre cada caja axial.
 
     Entra el ROI Align de P2 y P1 del corte (`config.M3D_ROI_FEAT`²) y el del CT a doble resolución
     (`config.M3D_MASK_SIZE`²). Rama de máscara: 2 conv 3×3 -> deconvolución ×2 -> concat con el CT -> 2 conv 3×3 ->
@@ -409,7 +405,7 @@ class Fundidora3DDetector(nn.Module):
         self.attention = {True: "cbam", False: "none"}.get(attention, attention)
         self.arch = arch = arch or current_arch()
         gated = ATTENTION_3D.get(self.attention)
-        # D-83: segundo canal de entrada, la ventana trabecular, calculada dentro de la red a partir del primero
+        # Segundo canal de entrada, la ventana trabecular, calculada dentro de la red a partir del primero
         self.trab_window = arch["trab_window"]
         self.in_channels = 2 if self.trab_window else 1
 
@@ -421,7 +417,7 @@ class Fundidora3DDetector(nn.Module):
             self.blocks.append(nn.Sequential(conv_in_relu(c, wi), nn.MaxPool3d(2)))
             c = wi
 
-        # Atención (CBAM o SE, con γ) en los bloques configurados (D-87: solo el 4)
+        # Atención (CBAM o SE, con γ) en los bloques configurados (`config.M3D_CBAM_BLOCKS`)
         self.attn = nn.ModuleList(
             gated(wi) if gated and i + 1 in arch["cbam_blocks"] else nn.Identity()
             for i, wi in enumerate(w)
@@ -435,24 +431,24 @@ class Fundidora3DDetector(nn.Module):
         )
 
         # Decoder U-Net 3D
-        lk = arch.get("decoder_act", "relu") == "leaky"     # D-90
+        lk = arch.get("decoder_act", "relu") == "leaky"
         self.up3 = Up3d(config.M3D_NECK, w[2], d3, lk)
         self.up2 = Up3d(d3, w[1], d2, lk)
         self.up1 = Up3d(d2, w[0], d1, lk)
         self.up0 = Up3d(d1, self.in_channels, d0, lk)  # 1/2 -> 1/1   (skip: la imagen de entrada)
-        # D-84: atención (con γ) a la salida de las primeras capas del decoder; alimenta segmentación y detección
+        # Atención (con γ) a la salida de las primeras capas del decoder; alimenta segmentación y detección
         self.dec_attn = nn.ModuleDict({lvl: gated({"p3": d3, "p2": d2}[lvl])
                                        for lvl in arch["decoder_attention"]} if gated else {})
 
-        # Segmentación (D-81): una cabeza, tres máscaras (sacro, coxal izq., coxal der.) + fondo; cada hueso es una
+        # Segmentación: una cabeza, tres máscaras (sacro, coxal izq., coxal der.) + fondo; cada hueso es una
         # instancia con todos sus fragmentos.
         self.sem_head = SegmentationHead3D(in_channels=d0, num_classes=config.M3D_SEM_CLASSES)
-        # D-90: supervisión profunda, salida semántica auxiliar sobre P1 (solo para la pérdida de entrenamiento)
+        # Supervisión profunda: salida semántica auxiliar sobre P1 (solo para la pérdida de entrenamiento)
         self.aux_head = SegmentationHead3D(d1, config.M3D_SEM_CLASSES) if arch.get("seg_aux", False) else None
 
         # Clasificación anatómica de cada instancia segmentada.
-        # Con cabeza de máscara (D-82, D-88), la clasificación es la rama de clase de cada caja (ROI), como en
-        # Mask R-CNN: recibe el vector del ROI. Sin ella (modelos anteriores), el promedio de P1 en cada instancia.
+        # Con cabeza de máscara, la clasificación es la rama de clase de cada caja (ROI), como en Mask R-CNN: recibe
+        # el vector del ROI. Sin ella, el promedio de P1 en cada instancia.
         self.mask_head = arch.get("mask_head", False)
         self.class_head = ClassificationHead3D(
             in_channels=config.M3D_MASK_CHANNELS if self.mask_head else d1,
@@ -466,7 +462,7 @@ class Fundidora3DDetector(nn.Module):
         self.grid = N // config.STRIDE
         self.heads = nn.ModuleDict()
 
-        for v in config.M3D_DET_VIEWS:                    # D-78: solo la axial
+        for v in config.M3D_DET_VIEWS:
             a = config.ANCHORS[v]
             self.heads[v] = AnchorHead(
                 d3 + d2,
@@ -650,7 +646,7 @@ class Fundidora3DDetector(nn.Module):
         regions,
         min_voxels: int = config.M3D_MIN_INSTANCE_VOXELS,
     ):
-        """Segmentación en dos etapas y clasificación de cada instancia (D-81).
+        """Segmentación en dos etapas y clasificación de cada instancia.
         Etapa 1: regiones detectadas (si `M3D_RESTRICT_TO_DETECTION`). Etapa 2: la máscara de cada hueso dentro de
         ellas; cada hueso es una instancia con todos sus fragmentos."""
         sem = segmentation_prediction(feats["sem_logits"])[0].cpu().numpy()
@@ -849,10 +845,10 @@ def step_loss(model, x, m, gen, n_slices=config.M3D_DET_SLICES, hr=None):
         from src.models.segmentation import segmentation_loss
         from src.models.classification import classification_loss
 
-        seg_loss, seg_terms = segmentation_loss(            # tres huesos + fondo: CE + Dice (D-81)
+        seg_loss, seg_terms = segmentation_loss(            # tres huesos + fondo: CE + Dice
             feats["sem_logits"], m,
             ce_weight=config.M3D_SEG_CE_WEIGHT, dice_weight=config.M3D_SEG_DICE_WEIGHT)
-        if "sem_logits_aux" in feats:                        # D-90: supervisión profunda sobre P1 (128³)
+        if "sem_logits_aux" in feats:                        # supervisión profunda sobre P1 (128³)
             aux_loss, _ = segmentation_loss(feats["sem_logits_aux"], m[::2, ::2, ::2],
                                             ce_weight=config.M3D_SEG_CE_WEIGHT, dice_weight=config.M3D_SEG_DICE_WEIGHT)
             seg_loss = seg_loss + config.M3D_SEG_AUX_WEIGHT * aux_loss
@@ -926,7 +922,7 @@ def to_gpu(img_u8, msk_u8, device, augment=False, params: dict | None = None):
 
 
 def input_channels(x: torch.Tensor, trab_window) -> torch.Tensor:
-    """(B, 1, ...) en la ventana de `config.HU_WINDOW` -> agrega la ventana trabecular (D-83) como segundo canal."""
+    """(B, 1, ...) en la ventana de `config.HU_WINDOW` -> agrega la ventana trabecular como segundo canal."""
     if not trab_window:
         return x
     lo, hi = config.HU_WINDOW
@@ -944,7 +940,7 @@ def hires_slices(img_hr, msk_hr, slices: torch.Tensor, device, aug: dict | None 
         im = img_hr[idx].to(device).float().div_(255)[:, None]
         ms = msk_hr[idx].to(device).long()
     else:
-        k, (Z, H, W) = len(slices), img_hr.shape
+        Z, H, W = img_hr.shape
         zn = (2 * slices.to(device).float() + 1) / Z - 1
         yn = (2 * torch.arange(H, device=device).float() + 1) / H - 1
         xn = (2 * torch.arange(W, device=device).float() + 1) / W - 1
@@ -1331,7 +1327,7 @@ def train(args):
     model = Fundidora3DDetector(attention).to(device)
     opt = _optimizer(model)
     steps = len(loader)
-    # Coseno sobre `args.epochs`, sin calentamiento (D-68): el lr parte de M3D_LR y baja hasta ~0 en la última época.
+    # Coseno sobre `args.epochs`, sin calentamiento: el lr parte de M3D_LR y baja hasta ~0 en la última época.
     total = args.epochs * steps
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: 0.5 * (1 + math.cos(math.pi * min(s, total) / total)))
     scaler = torch.amp.GradScaler("cuda", enabled=config.AMP and device.type == "cuda")
@@ -1415,7 +1411,7 @@ def train(args):
                            out_dir / "best.pth")
                 msg += "  * mejor"
             low = [n for n in ("sacro", "izq", "der") if row[f"val_dice_{n}"] < config.M3D_MIN_BONE_DICE]
-            if epoch + 1 >= 10 and low:                       # D-90: aviso de colapso de una clase
+            if epoch + 1 >= 10 and low:                       # aviso de colapso de una clase
                 msg += f"\n  ALERTA: Dice de {', '.join(low)} < {config.M3D_MIN_BONE_DICE} en validación (posible colapso)"
         torch.save({**state, "optimizer": opt.state_dict(), "scheduler": sched.state_dict(), "scaler": scaler.state_dict(),
                     "best": best, "history": history, "rng": torch.get_rng_state()}, last_path)
@@ -1468,7 +1464,7 @@ def overfit(args):
         f"| cls F1 {row['val_macro_f1']:.3f} "
         f"AUC {row['val_macro_auc']:.3f}"
     )
-    # D-90: criterio para seguir al entrenamiento completo
+    # Criterio para seguir al entrenamiento completo
     checks = {f"Dice {n}": row[f"val_dice_{n}"] for n in ("sacro", "izq", "der")}
     if model.mask_head:
         checks["Dice máscara"] = row["val_dice_mask"]
@@ -1482,8 +1478,6 @@ def calibrate(args):
     """Pérdida inicial de cada tarea (modelo sin entrenar, semilla fija, sin aumento) para fijar los λ:
     λ_t = prioridad_t / pérdida inicial_t (`config.M3D_LOSS_PRIORITY`). Los valores medidos se copian a
     `config.M3D_LOSS_INIT`."""
-    from src.models.segmentation import segmentation_loss
-    from src.models.classification import classification_loss
     det.seed_everything()
     device = det.get_device(args.device)
     model = Fundidora3DDetector(_attention(args)).to(device).train()
@@ -1499,7 +1493,7 @@ def calibrate(args):
         rows.append({"case_id": ids[i], **{k: t[k] for k in ("obj", "box", *tasks)}})
         print(f"{ids[i]}  " + "  ".join(f"{k} {rows[-1][k]:.4f}" for k in ("obj", "box", *tasks)), flush=True)
     det_init = {k: float(np.mean([r[k] for r in rows])) for k in ("obj", "box")}
-    box_w = det_init["obj"] / det_init["box"]          # D-72: la caja en la escala del objectness (clase 6.2)
+    box_w = det_init["obj"] / det_init["box"]          # la caja en la escala del objectness
     init = {"det": det_init["obj"] + box_w * det_init["box"],
             **{t: float(np.mean([r[t] for r in rows])) for t in tasks}}
     weights = {t: config.M3D_LOSS_PRIORITY[t] / init[t] for t in init}
@@ -1516,8 +1510,7 @@ def calibrate(args):
 # Evaluación final (todas las cabezas, pipeline completo)
 # ======================================================================================
 
-SEM_CLASSES = {"sacro": 1, "coxal_izq": 2, "coxal_der": 3}             # máscaras de la cabeza de segmentación (D-81)
-FRAG_CLASS = np.array([-1] + [0] * 10 + [1] * 10 + [2] * 10)      # código de fragmento -> 0 sacro, 1 izq., 2 der.
+SEM_CLASSES = {"sacro": 1, "coxal_izq": 2, "coxal_der": 3}             # máscaras de la cabeza de segmentación
 
 
 def _sync(device):
@@ -1528,7 +1521,7 @@ def _sync(device):
 
 
 def separation_eval(cid: str, inst_cube: np.ndarray, img_path, split: str, hires: bool = False) -> tuple[list, dict]:
-    """Distancia de separación (rúbrica 3.3) en el espacio ORIGINAL del CT, con el espaciado del header.
+    """Distancia de separación en el espacio ORIGINAL del CT, con el espaciado del header.
 
     - Real: `src.metrics.distancias.filas_caso` (módulo de P4): cada fragmento etiquetado del dataset frente al
       principal de su hueso (el de más vóxeles), EDT 3D. Los fragmentos que se tocan quedan a un paso de rejilla.
@@ -1541,7 +1534,7 @@ def separation_eval(cid: str, inst_cube: np.ndarray, img_path, split: str, hires
     img = pre.reorient(pre.load_volume(img_path))
     codes = pre.sitk.GetArrayFromImage(pre.reorient(pre.load_volume(config.LABEL_DIR / f"{cid}.mha")))
     geom = pre.cube_geometry(img)
-    if hires:                                                            # salida de la cabeza de máscara (D-82)
+    if hires:                                                            # salida de la cabeza de máscara
         geom = pre.hires_geometry(geom, config.M3D_HIRES_FACTOR)
     pred = pre.cube_to_original(inst_cube, geom, img)
     sp_xyz = tuple(float(v) for v in img.GetSpacing())
@@ -1646,14 +1639,14 @@ def _dist_summary(dist: pd.DataFrame) -> dict:
 
 @torch.no_grad()
 def mask_head_eval(model, feats, m, preds_ax, cid, split, img_path, device, roi_rows, roi_gt, dist_rows) -> dict:
-    """Evaluación de la cabeza de máscara y de la rama de clase en un CT (D-82, D-88).
+    """Evaluación de la cabeza de máscara y de la rama de clase en un CT.
 
     - Máscara: cajas axiales predichas -> máscaras pegadas a doble resolución -> Dice, IoU, HD95 y ASSD por hueso
       frente al hueso real a doble resolución; Dice de la pelvis; distancia de separación con esta salida.
     - Clase: sobre las cajas reales (F1 / AUC por caja) y de extremo a extremo (cada caja predicha contra la caja
       real del mismo corte con IoU ≥ 0,5; sin pareja, clase real −1).
     Agrega filas a `roi_rows`, `roi_gt` y `dist_rows`; devuelve las columnas del CT para `cases_<split>.csv`, las
-    etiquetas de la cabeza de máscara y el hueso real, los dos a doble resolución (para la fusión, D-93)."""
+    etiquetas de la cabeza de máscara y el hueso real, los dos a doble resolución (para la fusión)."""
     img_hr, msk_hr = load_hires(cid)
     sl = torch.arange(0, N, device=device)
     lab, rois = model.roi_predict(feats, preds_ax, sl, img_hr)
@@ -1691,9 +1684,9 @@ def mask_head_eval(model, feats, m, preds_ax, cid, split, img_path, device, roi_
     return {"mascara_pelvis_dice": pel, **{f"mascara_{c}_{k}": val for c, cm in hm.items() for k, val in cm.items()}}, lab, bone
 
 
-@torch.no_grad()   # sin esto el forward guarda el grafo y se queda sin memoria en 6 GB (RTX, 2026-10-10)
+@torch.no_grad()   # sin esto el forward guarda el grafo y se queda sin memoria en una GPU de 6 GB
 def evaluate(args):
-    """Evaluación final de `best.pth` en val y test con el pipeline completo (D-81):
+    """Evaluación final de `best.pth` en val y test con el pipeline completo:
     detección axial (cajas de la cabeza y ajustadas a la segmentación), segmentación de las tres máscaras (Dice, IoU,
     HD95 y ASSD por hueso y su macro, y Dice/IoU de la pelvis), clasificación de cada instancia (hueso) sobre los
     fragmentos reales y de extremo a extremo, distancia de separación en el espacio original del CT (predicha frente
@@ -1707,7 +1700,7 @@ def evaluate(args):
     ck = load_checkpoint(run_dir / "best.pth")
     extra = [k for k in ck["model"] if k.startswith("inst_head.")]
     if extra:
-        print(f"Se ignora la cabeza de instancia del checkpoint ({len(extra)} tensores; D-81)", flush=True)
+        print(f"Se ignora la cabeza de instancia del checkpoint ({len(extra)} tensores)", flush=True)
     model = load_model(ck, device)
     margins = list(config.M3D_REFINE_MARGINS)
     summary = {"run": args.run, "epoch": int(ck["epoch"]) + 1, "device": str(device), "splits": {}}
@@ -1721,8 +1714,8 @@ def evaluate(args):
         ids = case_ids(split)
         dets = {v: {"gt": [], "raw": [], **{f"m{k}": [] for k in margins}} for v in config.M3D_DET_VIEWS}
         bone_rows, case_rows, dist_rows, cls_gt = [], [], [], {"y": [], "prob": []}
-        dist_mask_rows, roi_rows, roi_gt = [], [], {"y": [], "prob": []}          # cabeza de máscara (D-82, D-88)
-        dist_fus_rows = []                                                        # fusión de las dos salidas (D-93)
+        dist_mask_rows, roi_rows, roi_gt = [], [], {"y": [], "prob": []}          # cabeza de máscara
+        dist_fus_rows = []                                                        # fusión de las dos salidas
         img_paths = {q.stem: q for d in config.IMAGE_DIRS for q in d.glob("*.mha")}
         for cid in ids:
             img, msk, _ = VolumeDataset([cid])[0]
@@ -1782,7 +1775,7 @@ def evaluate(args):
             # Distancia de separación en el espacio original
             d_rows, d_counts = separation_eval(cid, inst, img_paths[cid], split)
             dist_rows += d_rows
-            # Fusión de la semántica y la cabeza de máscara (postproceso, D-93), a doble resolución
+            # Fusión de la semántica y la cabeza de máscara (postproceso), a doble resolución
             fus_case = {}
             if model.mask_head:
                 fus = fuse_heads(inst.astype(np.uint8), mask_lab)
@@ -1905,7 +1898,7 @@ def evaluate(args):
 
 
 # ======================================================================================
-# Inferencia sobre un CT cualquiera (P-17)
+# Inferencia sobre un CT cualquiera
 # ======================================================================================
 def read_ct(path):
     """Lee un CT 3D: archivo `.mha` / `.nii` / `.nii.gz` / `.nrrd` o carpeta con una serie DICOM."""
@@ -1925,7 +1918,7 @@ FUSION_MODES = ("huesos", "union_sacro", "relleno")
 
 
 def fuse_heads(sem: np.ndarray, mask: np.ndarray, mode: str = config.M3D_FUSION_MODE) -> np.ndarray:
-    """Postproceso que une la cabeza semántica y la cabeza de máscara (D-93). `sem`: etiquetas del cubo (Z, Y, X);
+    """Postproceso que une la cabeza semántica y la cabeza de máscara. `sem`: etiquetas del cubo (Z, Y, X);
     `mask`: etiquetas de la cabeza de máscara (Z, f·Y, f·X). Devuelve etiquetas en la rejilla de `mask`
     (0 fondo, 1 sacro, 2 coxal izq., 3 coxal der.).
 
@@ -2059,7 +2052,7 @@ def infer(args):
         resumen["salidas"][nombre] = {}
         for b, region in enumerate(config.REGION_NAMES, start=1):
             cortes[f"{nombre}_{region}_px"] = (lab == b).reshape(nz, -1).sum(1)
-            _, _, frs = separation_distances(lab == b, sp, min_vox)       # rúbrica 3.3, espacio original
+            _, _, frs = separation_distances(lab == b, sp, min_vox)       # espacio original
             resumen["salidas"][nombre][region] = {
                 "volumen_cm3": float((lab == b).sum() * np.prod(sp) / 1000),
                 "cortes_con_hueso": int((cortes[f"{nombre}_{region}_px"] > 0).sum()),
@@ -2135,7 +2128,7 @@ def main() -> None:
     e = sub.add_parser("evaluate"); common(e)
     e.add_argument("--run", default=config.M3D_RUN_CBAM)
     e.add_argument("--keep-latency", action="store_true",
-                   help="no mide la latencia: conserva la del metrics.json anterior (p. ej. la medida en la RTX)")
+                   help="no mide la latencia: conserva la del metrics.json anterior (p. ej. la medida en otra máquina)")
     b = sub.add_parser("bench"); common(b)
     b.add_argument("--iters", type=int, default=5)
     i = sub.add_parser("infer", help="cajas, máscaras y pertenencia de un CT con cualquier número de cortes")
