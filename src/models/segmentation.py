@@ -1,8 +1,8 @@
-"""Segmentación 3D por hueso (D-81, asesoría del 2026-10-08).
+"""Segmentación 3D por hueso.
 
 Una sola cabeza sobre P0: 0 = fondo, 1 = sacro, 2 = coxal izquierdo, 3 = coxal derecho.
-Cada hueso es una instancia con TODOS sus fragmentos (los pequeños y el grande): el dataset tiene tres labels por
-hueso y el profesor pidió tres máscaras, sin separar los fragmentos de su hueso.
+Cada hueso es una instancia con todos sus fragmentos (los pequeños y el grande): tres máscaras, sin separar los
+fragmentos de su hueso.
 
 Inferencia en dos etapas: etapa 1, regiones óseas detectadas (cajas axiales agrupadas entre cortes); etapa 2, dentro
 de esas regiones, la máscara de cada hueso. La distancia de separación de cada fragmento se mide después, sobre la
@@ -77,39 +77,6 @@ def segmentation_prediction(logits: torch.Tensor) -> torch.Tensor:
 
 
 @torch.no_grad()
-def connected_components_3d(
-    binary_mask: torch.Tensor,
-    min_voxels: int = 1,
-) -> torch.Tensor:
-    """Genera IDs de instancia con componentes conexos."""
-
-    if binary_mask.ndim == 3:
-        binary_mask = binary_mask.unsqueeze(0)
-
-    device = binary_mask.device
-    result = []
-    # D-71: vecindad configurable (6 = caras, 18 = + aristas, 26 = + esquinas)
-    structure = generate_binary_structure(3, {6: 1, 18: 2, 26: 3}[config.M3D_CONNECTIVITY])
-
-    for mask in binary_mask:
-        mask_np = mask.detach().cpu().numpy().astype(bool)
-        labels_np, num_instances = label(mask_np, structure=structure)
-
-        if min_voxels > 1:
-            # Quita las islas pequeñas y renumera 1..K en el mismo orden (conteo vectorizado: un solo recorrido)
-            sizes = np.bincount(labels_np.ravel())
-            keep = sizes >= min_voxels
-            keep[0] = False
-            lut = np.zeros(len(sizes), dtype=np.int32)
-            lut[keep] = np.arange(1, keep.sum() + 1)
-            labels_np = lut[labels_np]
-
-        result.append(torch.from_numpy(labels_np.astype(np.int64)))
-
-    return torch.stack(result).to(device)
-
-
-@torch.no_grad()
 def boxes_to_region_mask_3d(
     boxes_by_slice: dict,
     volume_shape,
@@ -154,7 +121,7 @@ def bone_instances(sem: np.ndarray, region: np.ndarray | None = None):
 
 
 def separation_distances(bone: np.ndarray, spacing, min_voxels: int = config.M3D_MIN_INSTANCE_VOXELS):
-    """Distancia de separación (rúbrica 3.3) dentro de la máscara de UN hueso: componentes conexos
+    """Distancia de separación dentro de la máscara de UN hueso: componentes conexos
     (`config.M3D_CONNECTIVITY`); el más grande es el fragmento principal; para cada uno de los demás, la distancia
     mínima borde a borde al principal en mm (`distance_transform_edt` con `spacing` = (z, y, x) en mm).
     Fragmentos que se tocan quedan en el mismo componente (distancia 0).
@@ -202,14 +169,14 @@ def _binary_scores(
 
 @torch.no_grad()
 def segmentation_metrics(logits: torch.Tensor, fragment_mask: torch.Tensor):
-    """Dice e IoU de la pelvis (hueso contra fondo) y Dice e IoU macro de los tres huesos (D-81)."""
+    """Dice e IoU de la pelvis (hueso contra fondo) y Dice e IoU macro de los tres huesos."""
     target = bone_targets(fragment_mask).to(logits.device)
     pred = segmentation_prediction(logits)
     dice_bone, iou_bone = _binary_scores(pred > 0, target > 0)
     per = {b: _binary_scores(pred == b, target == b) for b in (1, 2, 3) if (target == b).any()}
     return {"dice": dice_bone, "iou": iou_bone, "dice_sem": float(np.mean([d for d, _ in per.values()])),
             "iou_sem": float(np.mean([i for _, i in per.values()])),
-            # Dice de cada hueso (NaN si el hueso no está en el CT): detecta el colapso de una clase (D-90)
+            # Dice de cada hueso (NaN si el hueso no está en el CT): detecta el colapso de una clase
             **{f"dice_{n}": per[b][0] if b in per else float("nan") for b, n in ((1, "sacro"), (2, "izq"), (3, "der"))}}
 
 

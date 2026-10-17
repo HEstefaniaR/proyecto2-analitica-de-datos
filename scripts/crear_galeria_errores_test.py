@@ -128,7 +128,6 @@ def main():
         if acceptable.any():
             errors = np.where(acceptable, errors, -1)
         z = int(np.argmax(errors))
-        good = (gt[z] > 0) & (pred[z] > 0)
         fn = (gt[z] > 0) & (pred[z] == 0)
         fp = (gt[z] == 0) & (pred[z] > 0)
         wrong_cls = (gt[z] > 0) & (pred[z] > 0) & (gt[z] != pred[z])

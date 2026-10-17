@@ -97,7 +97,7 @@ def predict_case(img, model: torch.nn.Module, device: str | None = None) -> dict
     spacing = tuple(float(s) for s in img.GetSpacing())                # (sx, sy, sz)
     fragmentos_id = np.zeros_like(instancias)
     fragmentos: list[dict] = []
-    # El umbral de la rúbrica (M3D_MIN_FRAGMENT_MM3 ≈ 191 mm³) es en mm³: en la rejilla original
+    # El umbral M3D_MIN_FRAGMENT_MM3 (≈ 191 mm³) es en mm³: en la rejilla original
     # (vóxel anisótropo) corresponden más vóxeles que los 50 del cubo isótropo.
     min_voxels_orig = max(1, round(config.M3D_MIN_FRAGMENT_MM3 / float(np.prod(spacing))))
     # Confianza del hueso: puntaje medio de las cajas detectadas de ese hueso

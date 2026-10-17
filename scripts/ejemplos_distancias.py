@@ -1,4 +1,4 @@
-"""Ejemplos visuales de la distancia de separación (rúbrica 3.3): real frente a predicha sobre las máscaras.
+"""Ejemplos visuales de la distancia de separación: real frente a predicha sobre las máscaras.
 
     PYTORCH_ENABLE_MPS_FALLBACK=1 uv run python scripts/ejemplos_distancias.py
 
@@ -48,7 +48,7 @@ def puntos_cercanos(lab: np.ndarray, main, frag, sp):
 def main() -> None:
     device = det.get_device("auto")
     ck = M.load_checkpoint(config.DETECTION_DIR / config.M3D_RUN_CBAM / "best.pth")
-    model = M.load_model(ck, device)   # arquitectura del checkpoint; ignora inst_head (D-81)
+    model = M.load_model(ck, device)   # arquitectura del checkpoint; ignora inst_head
     img_paths = {q.stem: q for d in config.IMAGE_DIRS for q in d.glob("*.mha")}
     out = config.RESULTS_DIR / "distancias" / "ejemplos"
     out.mkdir(parents=True, exist_ok=True)

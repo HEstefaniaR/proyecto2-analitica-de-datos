@@ -1,4 +1,4 @@
-"""Baseline SAM zero-shot con el modelo 3D final (rúbrica 4.2): SAM segmenta las cajas PREDICHAS por la cabeza de
+"""Baseline SAM zero-shot con el modelo 3D final: SAM segmenta las cajas PREDICHAS por la cabeza de
 detección axial del modelo 3D y se compara con las tres máscaras del propio modelo, frente a la máscara real.
 
     uv run python scripts/run_sam_baseline_3d.py [--run unet3d_cbam] [--split test] [--limit 3] [--stride 1]
@@ -40,7 +40,7 @@ HUESOS = {1: "sacrum", 2: "left_hipbone", 3: "right_hipbone"}
 
 def cargar_modelo(run: str, device: torch.device):
     ck = M.load_checkpoint(config.DETECTION_DIR / run / "best.pth")
-    model = M.load_model(ck, device)   # arquitectura del checkpoint; ignora inst_head (D-81)
+    model = M.load_model(ck, device)   # arquitectura del checkpoint; ignora inst_head
     return model, int(ck["epoch"]) + 1
 
 

@@ -7,7 +7,7 @@ de clases binarizado) con Dice e IoU. SAM es solo un baseline de comparación: n
 pipeline de detección ni se usa para generar etiquetas.
 
 Funciones puras; la orquestación (detector -> cajas -> SAM -> tabla por corte y región) está en
-scripts/run_sam_baseline.py.
+scripts/run_sam_baseline_3d.py.
 """
 from __future__ import annotations
 

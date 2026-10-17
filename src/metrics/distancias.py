@@ -37,14 +37,6 @@ def load_mask(path) -> tuple[np.ndarray, tuple[float, float, float]]:
     return sitk.GetArrayFromImage(img), tuple(float(s) for s in img.GetSpacing())
 
 
-def region_de(code: int) -> str:
-    """Región anatómica de un código de fragmento (1-10 sacro, 11-20 coxal izq., 21-30 coxal der.)."""
-    for region, codes in config.REGION_CODES.items():
-        if int(code) in codes:
-            return region
-    raise ValueError(f"Código de fragmento fuera de la taxonomía 1-30: {code}")
-
-
 def codes_inesperados(mask: np.ndarray) -> list[int]:
     """Etiquetas (>0) fuera de la taxonomía 1-30. Vacío = máscara conforme a la taxonomía."""
     validos = {int(c) for codes in config.REGION_CODES.values() for c in codes}

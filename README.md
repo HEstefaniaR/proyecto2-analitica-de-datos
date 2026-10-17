@@ -101,7 +101,7 @@ proyecto2-analitica-de-datos/
 │   └── PelvicU-3D-CBAM_arquitectura.png  # Diagrama de la arquitectura
 ├── notebooks/                    # 01 EDA · 02 backbone · 03 evaluación 3D · 04 distancias · 05 splits
 ├── dashboard/                    # App Streamlit: app.py, estado.py, views/ (tres visualizadores), subida_partes/
-├── scripts/                      # Baselines SAM, distancias GT, galería de errores, verificación, despliegue
+├── scripts/                      # Baseline SAM 3D, distancias GT, galería de errores, verificación, despliegue
 ├── splits/splits.csv             # División train/val/test por caso (versionada)
 ├── ejemplos/                     # CT 039 de test para probar la inferencia: ct_039.mha (volumen)
 │                                 # y ct_039_cortes/ (el mismo CT, un .mha por corte)
@@ -254,7 +254,37 @@ Cómo usarla:
    - **Reconstrucción 3D**: mallas interactivas (Plotly) por fragmento coloreadas por hueso y la línea 3D de la medición de separación con su valor en mm.
 3. Las predicciones se guardan en `results/dashboard_cache/` para no repetir cómputo; se puede borrar la carpeta sin riesgo.
 
-Sin dataset la app funciona en modo "Subir CT"; sin `best.pth` los dos visualizadores de inferencia no funcionan (el "Volumen crudo" sí). Para exponerla fuera de la máquina local, `scripts/desplegar_dashboard.sh` levanta Streamlit y un túnel de Cloudflare (requiere `cloudflared`) y muestra la URL pública.
+Sin dataset la app funciona en modo "Subir CT"; sin `best.pth` los dos visualizadores de inferencia no funcionan (el "Volumen crudo" sí).
+
+**Despliegue con un túnel de Cloudflare.** Para abrir el dashboard desde otro computador o desde un celular, se levanta Streamlit en la máquina local y un túnel rápido de Cloudflare (sin cuenta), que muestra una dirección pública `https://<algo>.trycloudflare.com`. La dirección funciona mientras el túnel esté abierto; Ctrl+C lo cierra. El modelo sigue corriendo en la máquina local.
+
+*macOS y Linux:*
+
+```bash
+# Instalar cloudflared (una vez)
+brew install cloudflared                                     # macOS
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+sudo dpkg -i cloudflared.deb                                 # Linux (Debian / Ubuntu)
+
+# Dashboard + túnel
+bash scripts/desplegar_dashboard.sh
+```
+
+*Windows:* instalar `cloudflared` y correr el mismo script desde Git Bash:
+
+```bash
+winget install --id Cloudflare.cloudflared
+bash scripts/desplegar_dashboard.sh
+```
+
+Sin Git Bash, en PowerShell, los dos pasos del script a mano (cada uno en su propia terminal, desde la raíz del proyecto):
+
+```powershell
+.venv\Scripts\python.exe -m streamlit run dashboard/app.py --server.port 8501 --server.address 127.0.0.1
+cloudflared tunnel --url http://127.0.0.1:8501
+```
+
+Otro puerto con el script: `PUERTO=8600 bash scripts/desplegar_dashboard.sh`.
 
 ## Parte 9 - Resultados de referencia
 
